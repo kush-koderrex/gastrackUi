@@ -2216,7 +2216,7 @@ class Utils {
                       padding: const EdgeInsets.all(10.0),
                       child: Text(
                         message,
-                        style: Theme.of(context).textTheme.headline6,
+                        style: Theme.of(context).textTheme.headlineLarge,
                       ),
                     ),
                     const SizedBox(

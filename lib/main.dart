@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:gas_track_ui/screen/Login_Screen.dart';
+import 'package:gas_track_ui/screen/onBoardScreen.dart';
 import 'package:gas_track_ui/screen/splash_screen.dart';
+import 'package:gas_track_ui/screen/welcome_screen.dart';
 import 'package:gas_track_ui/utils/app_colors.dart';
-
-
-
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,65 +26,9 @@ class _MyAppState extends State<MyApp> {
   static const String splashScr = 'splashScreen';
   static const String welcomeScr = 'welcomeScreen';
   static const String loginScr = 'loginScreen';
-  static const String loginConfirmScr = 'loginConfirm';
-  static const String onBoardScr = 'onBoardScreen';
-  static const String recoverPassScr = 'recoverPassword';
-  static const String resetPassScr = 'resetPassword';
-  static const String createaccountScr = 'createAccount';
-  static const String homeScr = 'homeScreen';
-  static const String navBarbottomScr = 'navBarBottom';
-  static const String helpScr = 'helpScreen';
-  static const String chatScr = 'chatScreen';
-  static const String searchScr = 'searchScreen';
-  static const String sizeChartCmScr = 'sizeChartCm';
-  static const String howToMeasureScr = 'howToMeasure';
-  static const String shippingScr = 'shipping';
-  static const String returnsScr = 'returnsScreen';
-  static const String justAskScr = 'justAskScreen';
-  static const String categoryWiseFilterScr = 'categoryWiseFilter';
-  static const String filterListScr = 'filterList';
-  static const String emptyWishListScr = 'emptyWishList';
-  static const String wishListHomeScr = 'WhishListHome';
-  static const String shareWishListScr = 'shareWishList';
-  static const String emptyCartScr = 'emptyCart';
-  static const String shoppingBagScr = 'shoppingBag';
-  static const String viewDetailsScr = 'viewDetails';
-  static const String discountDetailsScr = 'discountDetails';
-  static const String customPaymentScr = 'customPayment';
-  static const String selectAddressScr = 'selectAddress';
-  static const String billingAddressScr = 'billingAddress';
-  static const String billingAddressSelectedScr = 'billingAddressSelected';
-  static const String thankYouScr = 'thankYou';
-  static const String combinedShippingScr = 'combinedShipping';
-  static const String afterSubmittingScr = 'afterSubmitting';
-  static const String accountDashBoardScr = 'accountDashBoard';
-  static const String myordersScr = 'myorders';
-  static const String emptymyorderScr = 'emptymyorder';
-  static const String orderDetailsScr = 'orderDetails';
-  static const String exploreMoreAccountScr = 'exploreMoreAccount';
-  static const String exploreMoreAboutUsScr = 'exploreMoreAboutUs';
-  static const String testimonialsScr = 'testimonials';
-  static const String trackYourOrderScr = 'trackYourOrder';
-  static const String exploreMoreContactUSScr = 'exploreMoreContactUS';
-  static const String exploreMorePaymentScr = 'exploreMorePayment';
-  static const String myNotificationExploreScr = 'myNotificationExplore';
-  static const String accountScreenScr = 'AccountScreen';
-  static const String newLetterSubscriptionScr = 'newLetterSubscription';
-  static const String myMeasurementScr = 'myMeasurement';
-  static const String myMesurementtwoScr = 'myMesurementtwo';
-  static const String storeCreditScr = 'storeCredit';
-  static const String addressBookScr = 'addressBook';
-  static const String addNewAddressScr = 'addNewAddress';
-  static const String privacyPolicyScr = 'privacyPolicy';
-  static const String termAndConditionScr = 'termAndCondition';
-  static const String cmsLandingPageScr = 'cmsLandingPage';
-  static const String conceptPageScr = 'conceptPage';
-  static const String listingLandingPageeScr = 'listingLandingPagee';
-  static const String mixCategoryLandigPageScr = 'mixCategoryLandigPage';
-  static const String conceptLandingPagesecScr = 'conceptLandingPagesec';
-  static const String persionalStoreNostoScr = 'persionalStoreNosto';
-  static const String sizeChartInchScr = 'sizeChartInch';
-  static const String zoompagescr = 'zoompage';
+  static const String onboardScr = 'onBoardScreen';
+  // static const String onBoardScr = 'onBoardScreen';
+  // static const String recoverPassScr = 'recoverPassword';
 
 
   @override
@@ -93,8 +37,6 @@ class _MyAppState extends State<MyApp> {
     super.initState();
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -102,21 +44,22 @@ class _MyAppState extends State<MyApp> {
       // themeMode: ThemeMode.system,
       theme: ThemeData(
         primarySwatch: MyColors.pink,
-
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       darkTheme: ThemeData(
         primarySwatch: MyColors.pink,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      title: 'Utsav Fashion',
+      title: 'Gas Track',
       routes: <String, WidgetBuilder>{
         splashScr: (BuildContext context) => const SplashScreen(),
-
+        welcomeScr: (BuildContext context) => const SplashScreen(),
+        loginScr: (BuildContext context) => const LoginScreen(),
+        onboardScr: (BuildContext context) => const OnBoardScreen(),
       },
-      initialRoute: splashScr,
+      initialRoute: loginScr,
       navigatorKey: navigatorKey,
-      home: const MyHomePage(title: 'Utsav Fashion'),
+      home: const MyHomePage(title: 'Gas Track'),
     );
   }
 }
@@ -162,17 +105,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    Color getColor(Set<MaterialState> states) {
-      const Set<MaterialState> interactiveStates = <MaterialState>{
-        MaterialState.pressed,
-        MaterialState.hovered,
-        MaterialState.focused,
-      };
-      if (states.any(interactiveStates.contains)) {
-        return Colors.blue;
-      }
-      return Colors.red;
-    }
+
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -295,7 +228,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                     : Icons.visibility_off),
                                 onPressed: () {
                                   setState(
-                                        () {
+                                    () {
                                       passwordVisible = !passwordVisible;
                                     },
                                   );
@@ -311,7 +244,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     children: [
                       Checkbox(
                         checkColor: Colors.white,
-                        fillColor: MaterialStateProperty.resolveWith(getColor),
+                        // fillColor: MaterialStateProperty.resolveWith(getColor),
                         value: isChecked,
                         onChanged: (bool? value) {
                           setState(() {
@@ -363,7 +296,8 @@ class _MyHomePageState extends State<MyHomePage> {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryColorpink, // background
+                          backgroundColor:
+                              AppColors.primaryColorpink, // background
                         ),
                         icon: const Icon(
                           Icons.arrow_back,

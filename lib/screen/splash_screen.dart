@@ -37,7 +37,7 @@ class _SplashScreenState extends State<SplashScreen> {
       child: Scaffold(
         backgroundColor: AppColors.white,
         body: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             gradient: LinearGradient(
               colors: [
                 Color(0xFFC54239),
@@ -48,7 +48,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
           ),
           child: Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [
                   Color(0xFFC54239),
@@ -67,7 +67,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       Align(
                         alignment: Alignment.center,
                         child: Image.asset(
-                          "images/Splashscreen/splashScreen.png",
+                          "assets/images/Splashscreen/splashScreen.png",
                           height: 132,
                           width: 132,
                         ),
@@ -78,98 +78,19 @@ class _SplashScreenState extends State<SplashScreen> {
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: Image.asset(
-                    "images/Splashscreen/building.png",
+                    "assets/images/Splashscreen/building.png",
                     height: 200,
                     width: width,
+                    fit: BoxFit.fitWidth,
                   ),
                 ),
               ],
             ),
           ),
-          // Container(
-          //   child: Center(
-          //     child: Column(
-          //       mainAxisAlignment: MainAxisAlignment.center,
-          //       children: <Widget>[
-          //         Row(
-          //           mainAxisAlignment: MainAxisAlignment.center,
-          //           mainAxisSize: MainAxisSize.max,
-          //           children: <Widget>[
-          //             Align(
-          //               alignment: Alignment.bottomCenter,
-          //               child: Image.asset(
-          //                 "images/Splashscreen/splashScreen.png",
-          //                 height: 132,
-          //                 width: 132,
-          //               ),
-          //             ),
-          //           ],
-          //         ),
-          //         Align(
-          //           alignment: Alignment.bottomCenter,
-          //           child: Image.asset(
-          //             "images/Splashscreen/building.png",
-          //             height: 200,
-          //             width: width,
-          //           ),
-          //         ),
-          //       ],
-          //     ),
-          //   ),
-          // ),
         ),
 
-
-        // Container(
-        //   decoration: const BoxDecoration(
-        //     image: DecorationImage(
-        //       image: AssetImage("images/Rectangle.png"),
-        //       fit: BoxFit.cover,
-        //     ),
-        //   ),
-        //   child: Center(
-        //     child: Container(
-        //       child: Center(
-        //         child: Column(
-        //           mainAxisAlignment: MainAxisAlignment.center,
-        //           children: <Widget>[
-        //             Row(
-        //               mainAxisAlignment: MainAxisAlignment.center,
-        //               mainAxisSize: MainAxisSize.max,
-        //               children: <Widget>[
-        //                 Align(
-        //                   alignment: Alignment.bottomCenter,
-        //                   child: Image.asset(
-        //                     "images/SplashScreenLogo.png",
-        //                     height: 132,
-        //                     width: 132,
-        //                   ),
-        //                 ),
-        //               ],
-        //             ),
-        //           ],
-        //         ),
-        //       ),
-        //     ),
-        //   ),
-        // ),
       ),
     );
   }
 
-  // navigateUser(BuildContext context) {
-  //   if(PrefUtils.getUserkey().isNotEmpty){
-  //     Navigator.pushAndRemoveUntil(
-  //         context,
-  //         MaterialPageRoute(builder: (context) => const OnBoardScreen()),
-  //             (Route<dynamic> route) => false
-  //     );
-  //   }else{
-  //     Navigator.pushAndRemoveUntil(
-  //         context,
-  //         MaterialPageRoute(builder: (context) => const OnBoardScreen()),
-  //             (Route<dynamic> route) => false
-  //     );
-  //   }
-  // }
 }
