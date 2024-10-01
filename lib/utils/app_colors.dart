@@ -10,6 +10,9 @@ class AppColors extends MaterialColor {
   static const primaryColorpink = Color(0xFFFF4CBB);
   static const primaryColorblue = Color(0xFF34C1D1);
   static const primaryColorblueforexplorescreen = Color(0xFF39C1CF);
+  static const buttonsColor = Color(0x9F5BACF2);
+
+
 
   static const comomnColorgrey = Color(0xFFE1E1D9);
   static const pricecolor = Color(0xFFCB4551);

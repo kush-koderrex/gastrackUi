@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:gas_track_ui/screen/FirmwareUpdateScreen.dart';
+import 'package:gas_track_ui/screen/HomeScreen.dart';
 import 'package:gas_track_ui/screen/Login_Screen.dart';
+import 'package:gas_track_ui/screen/OtpScreen.dart';
 import 'package:gas_track_ui/screen/onBoardScreen.dart';
 import 'package:gas_track_ui/screen/splash_screen.dart';
-import 'package:gas_track_ui/screen/welcome_screen.dart';
 import 'package:gas_track_ui/utils/app_colors.dart';
 
 Future<void> main() async {
@@ -24,10 +26,11 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
   static const String splashScr = 'splashScreen';
-  static const String welcomeScr = 'welcomeScreen';
   static const String loginScr = 'loginScreen';
   static const String onboardScr = 'onBoardScreen';
-  // static const String onBoardScr = 'onBoardScreen';
+  static const String otpscreen = 'otpscreen';
+  static const String homescreen = 'homescreen';
+  static const String firmwareUpdateScreen = 'firmwareUpdateScreen';
   // static const String recoverPassScr = 'recoverPassword';
 
 
@@ -39,27 +42,32 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      // themeMode: ThemeMode.system,
-      theme: ThemeData(
-        primarySwatch: MyColors.pink,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        // themeMode: ThemeMode.system,
+        theme: ThemeData(
+          primarySwatch: MyColors.pink,
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+        ),
+        darkTheme: ThemeData(
+          primarySwatch: MyColors.pink,
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+        ),
+        title: 'Gas Track',
+        routes: <String, WidgetBuilder>{
+          splashScr: (BuildContext context) => const SplashScreen(),
+          loginScr: (BuildContext context) => const LoginScreen(),
+          onboardScr: (BuildContext context) => const OnBoardScreen(),
+          otpscreen: (BuildContext context) => const Otpscreen(),
+          homescreen: (BuildContext context) => const Homescreen(),
+          firmwareUpdateScreen: (BuildContext context) => const FirmwareUpdateScreen(),
+        },
+        initialRoute: splashScr,
+        navigatorKey: navigatorKey,
+        home: const MyHomePage(title: 'Gas Track'),
       ),
-      darkTheme: ThemeData(
-        primarySwatch: MyColors.pink,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      title: 'Gas Track',
-      routes: <String, WidgetBuilder>{
-        splashScr: (BuildContext context) => const SplashScreen(),
-        welcomeScr: (BuildContext context) => const SplashScreen(),
-        loginScr: (BuildContext context) => const LoginScreen(),
-        onboardScr: (BuildContext context) => const OnBoardScreen(),
-      },
-      initialRoute: loginScr,
-      navigatorKey: navigatorKey,
-      home: const MyHomePage(title: 'Gas Track'),
     );
   }
 }
