@@ -168,7 +168,7 @@ class _DeviceaddedScreenState extends State<DeviceaddedScreen> {
                                       child: ElevatedButton(
                                         onPressed: () {
                                           // if (Form.of(context)?.validate() ?? false) {
-                                          Navigator.push(
+                                          Navigator.pushReplacement(
                                             context,
                                             MaterialPageRoute(
                                               builder: (context) => Homescreen(),

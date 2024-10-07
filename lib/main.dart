@@ -1,17 +1,30 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:gas_track_ui/permissions/bluetooth_off_screen.dart';
+import 'package:gas_track_ui/screen/AddManuallyDevice.dart';
+
 import 'package:gas_track_ui/screen/FirmwareUpdateScreen.dart';
 import 'package:gas_track_ui/screen/HomeScreen.dart';
 import 'package:gas_track_ui/screen/Login_Screen.dart';
 import 'package:gas_track_ui/screen/OtpScreen.dart';
 import 'package:gas_track_ui/screen/onBoardScreen.dart';
 import 'package:gas_track_ui/screen/splash_screen.dart';
+import 'package:gas_track_ui/test.dart';
 import 'package:gas_track_ui/utils/app_colors.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // requestPermissions();
+  await Firebase.initializeApp();
+  FlutterBluePlus.setLogLevel(LogLevel.verbose, color: true);
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp])
       .then((_) {
+
     runApp(const MyApp());
   });
 }
@@ -31,7 +44,11 @@ class _MyAppState extends State<MyApp> {
   static const String otpscreen = 'otpscreen';
   static const String homescreen = 'homescreen';
   static const String firmwareUpdateScreen = 'firmwareUpdateScreen';
+  static const String radarBleScreen = 'radarBleScreen';
+  static const String addManuallyDeviceScreen = 'addManuallyDeviceScreen';
   // static const String recoverPassScr = 'recoverPassword';
+
+  BluetoothAdapterState _adapterState = BluetoothAdapterState.unknown;
 
 
   @override
@@ -42,6 +59,9 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    Widget screen = _adapterState == BluetoothAdapterState.on
+        ? const SplashScreen()
+        : BluetoothOffScreen(adapterState: _adapterState);
     return MediaQuery(
       data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
       child: MaterialApp(
@@ -51,22 +71,20 @@ class _MyAppState extends State<MyApp> {
           primarySwatch: MyColors.pink,
           visualDensity: VisualDensity.adaptivePlatformDensity,
         ),
-        darkTheme: ThemeData(
-          primarySwatch: MyColors.pink,
-          visualDensity: VisualDensity.adaptivePlatformDensity,
-        ),
         title: 'Gas Track',
         routes: <String, WidgetBuilder>{
           splashScr: (BuildContext context) => const SplashScreen(),
           loginScr: (BuildContext context) => const LoginScreen(),
           onboardScr: (BuildContext context) => const OnBoardScreen(),
-          otpscreen: (BuildContext context) => const Otpscreen(),
+          otpscreen: (BuildContext context) =>  Otpscreen(verificationId: "",),
           homescreen: (BuildContext context) => const Homescreen(),
           firmwareUpdateScreen: (BuildContext context) => const FirmwareUpdateScreen(),
+          addManuallyDeviceScreen: (BuildContext context) => const AddManuallyDeviceScreen(),
         },
         initialRoute: splashScr,
         navigatorKey: navigatorKey,
-        home: const MyHomePage(title: 'Gas Track'),
+        // home: const MyHomePage(title: 'Gas Track'),
+        home: screen,
       ),
     );
   }

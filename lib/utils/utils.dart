@@ -19,6 +19,7 @@ class AppStyles {
     fontFamily: 'Cerapro',
     fontSize: 16,
     fontWeight: FontWeight.w500,
+    color: Colors.white
   );
 
   static TextStyle customTextStyle({double fontSize = 16.0, FontWeight fontWeight = FontWeight.w500}) {

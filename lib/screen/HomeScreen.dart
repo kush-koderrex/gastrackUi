@@ -123,7 +123,6 @@ class _HomescreenState extends State<Homescreen> {
               ),
             ),
           ),
-
           Padding(
             padding: EdgeInsets.only(top: height / 7), // Adjust for gradient
             child: Container(
@@ -456,7 +455,7 @@ class _HomescreenState extends State<Homescreen> {
                                       ),
                                       Positioned(
                                         top: 10,
-                                        left:120 ,
+                                        left:width/3.8 ,
                                         child: Center(
                                           child: Container(
                                             width: 250,

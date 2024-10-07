@@ -1,4 +1,9 @@
+
+
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gas_track_ui/screen/OtpScreen.dart';
 import 'package:gas_track_ui/utils/utils.dart';
 
@@ -10,24 +15,89 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _phoneController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  // String phoneNumber = ;
+  String verificationId = "";
+  String otpCode = "";
+  bool otpSent = false;
+
+  @override
+  void dispose() {
+    _phoneController.dispose(); // Dispose of the controller
+    super.dispose();
+  }
+
+  Future<void> sendOtp() async {
+
+    String phoneNumber = "+91" + _phoneController.text.trim();
+    if (_validatePhoneNumber(phoneNumber) != null) {
+      // Return if the phone number is invalid
+      return;
+    }
+
+    print(phoneNumber);
+    await _auth.verifyPhoneNumber(
+      phoneNumber: phoneNumber,
+      timeout: const Duration(seconds: 60),
+      verificationCompleted: (PhoneAuthCredential credential) async {
+        // Automatically verifies and signs in the user
+        await _auth.signInWithCredential(credential);
+        // Navigate to the next screen (if necessary) after successful verification
+        // Navigator.push(context, MaterialPageRoute(builder: (context) => NextScreen()));
+      },
+      verificationFailed: (FirebaseAuthException e) {
+        print("Verification failed: ${e.message}");
+      },
+      codeSent: (String verId, int? resendToken) {
+        setState(() {
+          verificationId = verId;
+          otpSent = true;
+        });
+        print(verificationId);
+        Fluttertoast.showToast(
+          msg: "OTP sent successfully!",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM, // You can change this to TOP, CENTER, etc.
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.black, // Background color of the toast
+          textColor: Colors.white, // Text color of the toast
+          fontSize: 16.0, // Font size of the toast
+        );
+        // Navigate to the OTP screen after the OTP is sent
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => Otpscreen(verificationId: verificationId), // Pass verificationId if needed
+          ),
+        );
+      },
+      codeAutoRetrievalTimeout: (String verId) {
+        setState(() {
+          verificationId = verId;
+        });
+      },
+    );
+  }
+
+  // Function to validate phone number
+  String? _validatePhoneNumber(String? value) {
+    // Regular expression to validate phone number
+    final phoneRegExp = RegExp(r'^\+91\d{10}$');
+    if (value == null || value.isEmpty) {
+      return 'Please enter a phone number';
+    }
+    if (!phoneRegExp.hasMatch(value)) {
+      return 'Please enter a valid phone number (+91XXXXXXXXXX)';
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     var height = MediaQuery.of(context).size.height;
     var width = MediaQuery.of(context).size.width;
-    final _phoneController = TextEditingController();
 
-    // Function to validate phone number
-    String? _validatePhoneNumber(String? value) {
-      // Regular expression to validate phone number
-      final phoneRegExp = RegExp(r'^\+91\d{10}$');
-      if (value == null || value.isEmpty) {
-        return 'Please enter a phone number';
-      }
-      if (!phoneRegExp.hasMatch(value)) {
-        return 'Please enter a valid phone number (+91XXXXXXXXXX)';
-      }
-      return null;
-    }
 
     return Scaffold(
       body: Stack(
@@ -100,14 +170,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      const Text(
+                                       Text(
                                         'Welcome to ',
-                                        style: TextStyle(
-                                          color: Colors.black,
-                                          fontSize: 25,
-                                          fontWeight: FontWeight.w600,
-                                          fontFamily: 'Cerapro',
-                                        ),
+                                        style: AppStyles.customTextStyle(
+                                            fontSize: 25.0,
+                                            fontWeight:
+                                            FontWeight.w600),
                                       ),
                                       ShaderMask(
                                         shaderCallback: (bounds) =>
@@ -179,8 +247,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                           Text(
                                             '+91',
                                             style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
+                                              // fontWeight: FontWeight.bold,
+                                              fontWeight: FontWeight.w400,
+                                              fontFamily: 'Cerapro',
+                                              fontSize: 15,
                                               color: Colors.black,
                                             ),
                                           ),
@@ -214,12 +284,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                 child: ElevatedButton(
                                   onPressed: () {
                                     // if (Form.of(context)?.validate() ?? false) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => Otpscreen(),
-                                      ),
-                                    );
+                                    sendOtp();
+
+                                    // Navigator.push(
+                                    //   context,
+                                    //   MaterialPageRoute(
+                                    //     builder: (context) => Otpscreen(verificationId: null,),
+                                    //   ),
+                                    // );
                                     // }
                                   },
                                   style: ElevatedButton.styleFrom(
@@ -350,7 +422,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                                       context,
                                                       MaterialPageRoute(
                                                           builder: (context) =>
-                                                              const Otpscreen()));
+                                                               Otpscreen(verificationId: "",)));
                                                 }),
                                           ],
                                         ),

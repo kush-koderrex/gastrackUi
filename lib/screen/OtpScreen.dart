@@ -1,4 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gas_track_ui/screen/AddYouDevice.dart';
 import 'package:gas_track_ui/screen/Login_Screen.dart';
 import 'package:gas_track_ui/utils/app_colors.dart';
@@ -6,21 +8,60 @@ import 'package:gas_track_ui/utils/utils.dart';
 import 'package:pinput/pinput.dart';
 
 class Otpscreen extends StatefulWidget {
-  const Otpscreen({super.key});
+  // Otpscreen({super.key, required verificationId});
+  final String verificationId;
+
+  const Otpscreen({Key? key, required this.verificationId}) : super(key: key);
+
+  // String? verificationId;
 
   @override
   State<Otpscreen> createState() => _OtpscreenState();
 }
 
 class _OtpscreenState extends State<Otpscreen> {
+  final _otpController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+
+  Future<void> verifyOtp() async {
+    try {
+      print(widget.verificationId);
+      // Ensure the verificationId is not null
+      if (widget.verificationId == null || widget.verificationId!.isEmpty) {
+        Fluttertoast.showToast(msg: "Verification ID is missing.");
+        return;
+      }
+
+      // Create a PhoneAuthCredential using the verificationId and OTP entered by the user
+      PhoneAuthCredential credential = PhoneAuthProvider.credential(
+        verificationId: widget.verificationId!,
+        smsCode: _otpController.text.trim(), // Use the OTP from the controller, trim whitespace
+      );
+
+      // Sign in with the credential
+      await _auth.signInWithCredential(credential);
+
+      // Navigate to AddYourDeviceScreen on successful verification
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const AddYouDeviceScreen(),
+        ),
+      );
+    } catch (e) {
+      Fluttertoast.showToast(msg: "Invalid OTP: ${e.toString()}");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     var height = MediaQuery.of(context).size.height;
     var width = MediaQuery.of(context).size.width;
-    final _otpController = TextEditingController();
+    print("widget.verificationId");
+    print(widget.verificationId);
 
     return Scaffold(
-
       body: SingleChildScrollView(
         child: Stack(
           children: [
@@ -145,23 +186,23 @@ class _OtpscreenState extends State<Otpscreen> {
                                     children: [
                                       Expanded(
                                         child: Pinput(
-                                          length: 4,
+                                          length: 6,
                                           mainAxisAlignment:
                                               MainAxisAlignment.spaceBetween,
                                           controller: _otpController,
                                           onCompleted: (value) {
-                                            // submitOtp();
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) =>
-                                                    const AddYouDeviceScreen(),
-                                              ),
-                                            );
+                                            verifyOtp();
+                                            // Navigator.push(
+                                            //   context,
+                                            //   MaterialPageRoute(
+                                            //     builder: (context) =>
+                                            //         const AddYouDeviceScreen(),
+                                            //   ),
+                                            // );
                                           },
                                           validator: (value) {
                                             if (value != null &&
-                                                value.length != 4) {
+                                                value.length != 6) {
                                               return 'OTP should be of 6 digits.';
                                             } else {}
                                             return null;
@@ -171,7 +212,8 @@ class _OtpscreenState extends State<Otpscreen> {
                                             height: 52,
                                             decoration: BoxDecoration(
                                               border: Border.all(
-                                                  color: AppStyles.cutstomIconColor,
+                                                  color: AppStyles
+                                                      .cutstomIconColor,
                                                   width: 1),
                                               borderRadius:
                                                   BorderRadius.circular(8),
@@ -212,17 +254,19 @@ class _OtpscreenState extends State<Otpscreen> {
                                             child: ElevatedButton(
                                               onPressed: () {
                                                 // if (Form.of(context)?.validate() ?? false) {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        const AddYouDeviceScreen(),
-                                                  ),
-                                                );
+                                                  verifyOtp();
+                                                // Navigator.push(
+                                                //   context,
+                                                //   MaterialPageRoute(
+                                                //     builder: (context) =>
+                                                //         const AddYouDeviceScreen(),
+                                                //   ),
+                                                // );
                                                 // }
                                               },
                                               style: ElevatedButton.styleFrom(
-                                                backgroundColor: AppStyles.cutstomIconColor, // Button background color
+                                                backgroundColor: AppStyles
+                                                    .cutstomIconColor, // Button background color
                                                 foregroundColor: Colors
                                                     .white, // Button text color
                                                 shape: RoundedRectangleBorder(
@@ -274,8 +318,8 @@ class _OtpscreenState extends State<Otpscreen> {
                                                               fontWeight:
                                                                   FontWeight
                                                                       .w400,
-                                                              color:
-                                                                  AppStyles.cutstomIconColor,
+                                                              color: AppStyles
+                                                                  .cutstomIconColor,
 
                                                               // decoration: TextDecoration.underline,
                                                               decorationColor:
