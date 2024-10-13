@@ -1,6 +1,11 @@
+import 'dart:async';
+
 import 'package:easy_stepper/easy_stepper.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:gas_track_ui/permissions/bluetooth_off_screen.dart';
 import 'package:gas_track_ui/screen/CylinderDetailScreen.dart';
 import 'package:gas_track_ui/screen/DeviceAdded.dart';
 import 'package:gas_track_ui/screen/MenuScreen.dart';
@@ -11,9 +16,55 @@ class Homescreen extends StatefulWidget {
 
   @override
   State<Homescreen> createState() => _HomescreenState();
+
+
 }
 
+
+
 class _HomescreenState extends State<Homescreen> {
+
+  bool _isBluetoothEnabled = false; // Blu
+
+  BluetoothAdapterState _adapterState = BluetoothAdapterState.unknown; // Default state
+  late StreamSubscription<BluetoothAdapterState> _adapterStateSubscription;
+
+  Future<void> checkBluetoothState() async {
+    BluetoothAdapterState state = await FlutterBluePlus.adapterState.first; // Get the current Bluetooth state
+
+    if (state == BluetoothAdapterState.on) {
+      setState(() {
+        _isBluetoothEnabled = true; // Update the state if Bluetooth is enabled
+      });
+      // onScanPressed(); // Start scanning for devices if Bluetooth is on
+    } else {
+      // Show a message or navigate if Bluetooth is off
+      Fluttertoast.showToast(msg: "Please enable Bluetooth to add devices.");
+      // Optionally navigate back or show a different screen
+      Navigator.pop(context);
+    }
+  }
+  @override
+  void initState() {
+    // TODO: implement initState
+    checkBluetoothState();
+    _adapterStateSubscription =
+        FlutterBluePlus.adapterState.listen((state) {
+          setState(() {
+            _adapterState = state;
+          });
+        });
+    super.initState();
+  }
+  @override
+  void dispose() {
+    // Cancel the Bluetooth state subscription when widget is disposed
+    _adapterStateSubscription.cancel();
+    super.dispose();
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     var height = MediaQuery.of(context).size.height;
@@ -103,7 +154,7 @@ class _HomescreenState extends State<Homescreen> {
         titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20),
       ),
       extendBodyBehindAppBar: true, // Ensures the body goes behind the AppBar
-      body: Stack(
+      body: _isBluetoothEnabled?Stack(
         children: [
           // Gradient with Custom Clip Path at the top of the screen
           ClipPath(
@@ -525,7 +576,7 @@ class _HomescreenState extends State<Homescreen> {
             ),
           ),
         ],
-      ),
+      ): BluetoothOffScreen(adapterState: _adapterState),
     );
   }
 }

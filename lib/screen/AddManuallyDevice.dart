@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gas_track_ui/screen/FillOtherInformation.dart';
 import 'package:gas_track_ui/utils/extra.dart';
 import 'package:gas_track_ui/utils/snackbar.dart';
@@ -23,6 +24,38 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
   List<ScanResult> _scanResults = [];
   List<BluetoothDevice> _systemDevices = [];
   // List<Item> items = []; // Changed to List<Item>
+  bool _isBluetoothEnabled = false; // Bluetooth state variable
+
+  // Method to check Bluetooth state
+  Future<void> checkBluetoothState() async {
+    BluetoothAdapterState state = await FlutterBluePlus.adapterState.first; // Get the current Bluetooth state
+
+    if (state == BluetoothAdapterState.on) {
+      setState(() {
+        _isBluetoothEnabled = true; // Update the state if Bluetooth is enabled
+      });
+      onScanPressed(); // Start scanning for devices if Bluetooth is on
+    } else {
+      // Show a message or navigate if Bluetooth is off
+      Fluttertoast.showToast(msg: "Please enable Bluetooth to add devices.");
+      // Optionally navigate back or show a different screen
+      Navigator.pop(context);
+    }
+  }
+
+  void onConnectPressed(BluetoothDevice device) {
+    device.connectAndUpdateStream().then((_) {
+      showCustomDialog(context);
+      // If the connection was successful, print "Connected"
+      print("Connected");
+      Fluttertoast.showToast(msg: "Device Connected");
+    }).catchError((e) {
+      // If an error occurred during connection, print "Not connected"
+      print("Not connected");
+      Fluttertoast.showToast(msg: "Device Not connected");
+      Snackbar.show(ABC.c, prettyException("Connect Error:", e), success: false);
+    });
+  }
 
   // This function updates the items list with device information from scan results
   // void updateItemsFromScanResults(List<ScanResult> scanResults) {
@@ -56,7 +89,9 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
   @override
   void initState() {
     super.initState();
+    checkBluetoothState();
     onScanPressed();
+
 
     _scanResultsSubscription = FlutterBluePlus.scanResults.listen((results) {
       // Filter results based on platformName being "BLE Device"
@@ -100,11 +135,11 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
     super.dispose();
   }
 
-  void onConnectPressed(BluetoothDevice device) {
-    device.connectAndUpdateStream().catchError((e) {
-      Snackbar.show(ABC.c, prettyException("Connect Error:", e), success: false);
-    });
-  }
+  // void onConnectPressed(BluetoothDevice device) {
+  //   device.connectAndUpdateStream().catchError((e) {
+  //     Snackbar.show(ABC.c, prettyException("Connect Error:", e), success: false);
+  //   });
+  // }
 
   Future onScanPressed() async {
     try {
@@ -113,7 +148,7 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
       Snackbar.show(ABC.b, prettyException("System Devices Error:", e), success: false);
     }
     try {
-      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
+      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
     } catch (e) {
       Snackbar.show(ABC.b, prettyException("Start Scan Error:", e), success: false);
     }
@@ -121,6 +156,34 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
       setState(() {});
     }
   }
+
+  void connectDevice(BluetoothDevice device) {
+    device.connect().then((_) {
+      // Connection successful
+      Snackbar.show(ABC.c, "Connected to ${device.remoteId}", success: true);
+    }).catchError((e) {
+      // Connection failed, retry after delay
+      Snackbar.show(ABC.c, "Connect Error: ${prettyException("Error:", e)}", success: false);
+      Future.delayed(Duration(seconds: 5), () {
+        connectDevice(device); // Retry connection
+      });
+    });
+  }
+
+
+
+  // void onConnectPressed(BluetoothDevice device) {
+  //   // Try to connect to the device
+  //   device.connect().then((_) {
+  //     print("<-------------Connected --------------->");
+  //     // Connection successful, show success toast
+  //     Snackbar.show(ABC.c, "Connected to ${device.remoteId}", success: true);
+  //   }).catchError((e) {
+  //     print("<------------- Not Connected --------------->");
+  //     // Connection failed, show error toast
+  //     Snackbar.show(ABC.c, prettyException("Connect Error:", e), success: false);
+  //   });
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -246,9 +309,46 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                                                   left: centerX + 80,
                                                   bottom: centerY,
                                                   child: InkWell(
-                                                    onTap: () {
-                                                      showCustomDialog(context);
+
+                                                    onTap: () async {
+                                                      try {
+                                                        await _scanResults[0].device.connect();
+                                                        await _scanResults[0].device.createBond(); // If this completes without exception, assume success
+                                                        Fluttertoast.showToast(
+                                                          msg: 'Device bonded successfully!',
+                                                          toastLength: Toast.LENGTH_LONG,
+                                                          gravity: ToastGravity.BOTTOM,
+                                                          backgroundColor: Colors.green,
+                                                          textColor: Colors.white,
+                                                          fontSize: 16.0,
+                                                        );
+                                                        Future.delayed(
+                                                            Duration(
+                                                                seconds: 2),
+                                                                () {
+                                                                  showCustomDialog(context);
+                                                            });
+
+
+                                                      } catch (e) {
+                                                        Fluttertoast.showToast(
+                                                          msg: 'Failed to bond the device: ${e.toString()}',
+                                                          toastLength: Toast.LENGTH_SHORT,
+                                                          gravity: ToastGravity.BOTTOM,
+                                                          backgroundColor: Colors.red,
+                                                          textColor: Colors.white,
+                                                          fontSize: 16.0,
+                                                        );
+                                                      }
+                                                      // showCustomDialog(context);
                                                     },
+                                                    // onTap: () {
+                                                    //
+                                                    //   print(_scanResults[0].device);
+                                                    //   // connectDevice(_scanResults[0].device);
+                                                    //   // showCustomDialog(context);
+                                                    //   onConnectPressed(_scanResults[0].device);
+                                                    // },
                                                     child: Column(
                                                       children: [
                                                         CircleAvatar(
@@ -279,7 +379,28 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                                                   right: centerX,
                                                   bottom: centerY + 90,
                                                   child: InkWell(
-                                                    onTap: () {
+                                                    onTap: () async {
+                                                      try {
+                                                        await _scanResults[1].device.connect();
+                                                        await _scanResults[1].device.createBond(); // If this completes without exception, assume success
+                                                        Fluttertoast.showToast(
+                                                          msg: 'Device bonded successfully!',
+                                                          toastLength: Toast.LENGTH_LONG,
+                                                          gravity: ToastGravity.BOTTOM,
+                                                          backgroundColor: Colors.green,
+                                                          textColor: Colors.white,
+                                                          fontSize: 16.0,
+                                                        );
+                                                      } catch (e) {
+                                                        Fluttertoast.showToast(
+                                                          msg: 'Failed to bond the device: ${e.toString()}',
+                                                          toastLength: Toast.LENGTH_SHORT,
+                                                          gravity: ToastGravity.BOTTOM,
+                                                          backgroundColor: Colors.red,
+                                                          textColor: Colors.white,
+                                                          fontSize: 16.0,
+                                                        );
+                                                      }
                                                       showCustomDialog(context);
                                                     },
                                                     child: Column(

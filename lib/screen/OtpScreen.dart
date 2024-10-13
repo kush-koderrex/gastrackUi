@@ -10,8 +10,9 @@ import 'package:pinput/pinput.dart';
 class Otpscreen extends StatefulWidget {
   // Otpscreen({super.key, required verificationId});
   final String verificationId;
+  final String phoneNumber;
 
-  const Otpscreen({Key? key, required this.verificationId}) : super(key: key);
+  const Otpscreen({Key? key, required this.verificationId ,required this.phoneNumber}) : super(key: key);
 
   // String? verificationId;
 
@@ -22,6 +23,7 @@ class Otpscreen extends StatefulWidget {
 class _OtpscreenState extends State<Otpscreen> {
   final _otpController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool isLoading = false;
 
 
   Future<void> verifyOtp() async {
@@ -154,7 +156,7 @@ class _OtpscreenState extends State<Otpscreen> {
                                     ),
                                     Column(
                                       children: [
-                                        const Text(
+                                         Text(
                                             'We have sent the Verification',
                                             style: TextStyle(
                                               color: Colors.black,
@@ -162,7 +164,7 @@ class _OtpscreenState extends State<Otpscreen> {
                                               fontSize: 14,
                                               fontWeight: FontWeight.w400,
                                             )),
-                                        const Text(' Code to +91 ******8945',
+                                         Text(' Code to +91 ******'+widget.phoneNumber.substring(widget.phoneNumber.length - 4),
                                             style: TextStyle(
                                               color: Colors.black,
                                               fontFamily: 'Cerapro',
@@ -254,6 +256,9 @@ class _OtpscreenState extends State<Otpscreen> {
                                             child: ElevatedButton(
                                               onPressed: () {
                                                 // if (Form.of(context)?.validate() ?? false) {
+                                                setState(() {
+                                                  isLoading  = true;
+                                                });
                                                   verifyOtp();
                                                 // Navigator.push(
                                                 //   context,
@@ -284,7 +289,10 @@ class _OtpscreenState extends State<Otpscreen> {
                                                 elevation:
                                                     5, // Elevation (shadow)
                                               ),
-                                              child: const Text(
+                                              child: isLoading
+                                                  ? CircularProgressIndicator(
+                                                color: Colors.white,
+                                              ) :const Text(
                                                 'Verify & Continue',
                                                 style: TextStyle(
                                                   fontSize: 15,

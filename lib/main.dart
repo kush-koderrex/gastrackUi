@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -48,13 +50,27 @@ class _MyAppState extends State<MyApp> {
   static const String addManuallyDeviceScreen = 'addManuallyDeviceScreen';
   // static const String recoverPassScr = 'recoverPassword';
 
-  BluetoothAdapterState _adapterState = BluetoothAdapterState.unknown;
+  BluetoothAdapterState _adapterState = BluetoothAdapterState.unknown; // Default state
 
+  late StreamSubscription<BluetoothAdapterState> _adapterStateSubscription;
 
   @override
   void initState() {
-    // init();
     super.initState();
+    // Listen to Bluetooth adapter state changes
+    _adapterStateSubscription =
+        FlutterBluePlus.adapterState.listen((state) {
+          setState(() {
+            _adapterState = state;
+          });
+        });
+  }
+
+  @override
+  void dispose() {
+    // Cancel the Bluetooth state subscription when widget is disposed
+    _adapterStateSubscription.cancel();
+    super.dispose();
   }
 
   @override
@@ -76,7 +92,7 @@ class _MyAppState extends State<MyApp> {
           splashScr: (BuildContext context) => const SplashScreen(),
           loginScr: (BuildContext context) => const LoginScreen(),
           onboardScr: (BuildContext context) => const OnBoardScreen(),
-          otpscreen: (BuildContext context) =>  Otpscreen(verificationId: "",),
+          otpscreen: (BuildContext context) =>  Otpscreen(verificationId: "", phoneNumber: '',),
           homescreen: (BuildContext context) => const Homescreen(),
           firmwareUpdateScreen: (BuildContext context) => const FirmwareUpdateScreen(),
           addManuallyDeviceScreen: (BuildContext context) => const AddManuallyDeviceScreen(),

@@ -16,7 +16,10 @@ class _EditProfileState extends State<EditProfile> {
   Widget build(BuildContext context) {
     var height = MediaQuery.of(context).size.height;
     var width = MediaQuery.of(context).size.width;
-    final _phoneController = TextEditingController();
+    // final _phoneController = TextEditingController();
+    final _deviceNameController = TextEditingController();
+    final _gasCompanyNameController = TextEditingController();
+    final _gasConsumerNumberController = TextEditingController();
     int activeStep = 1;
 
     String? _validatePhoneNumber(String? value) {
@@ -46,260 +49,262 @@ class _EditProfileState extends State<EditProfile> {
         titleTextStyle: TextStyle(color: Colors.white, fontSize: 20),
       ),
       extendBodyBehindAppBar: true, // Ensures the body goes behind the AppBar
-      body: Stack(
-        children: [
-          // Gradient with Custom Clip Path at the top of the screen
-          ClipPath(
-            clipper:
-                TopRoundedRectangleClipper(), // Custom clipper for the top curve
-            child: Container(
-              height: height * 0.30, // Adjust height of the effect
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xFFFA7365),
-                    Color(0xFF9A4DFF)
-                  ], // Gradient colors
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+      body: SingleChildScrollView(
+        child: Stack(
+          children: [
+            // Gradient with Custom Clip Path at the top of the screen
+            ClipPath(
+              clipper:
+                  TopRoundedRectangleClipper(), // Custom clipper for the top curve
+              child: Container(
+                height: height * 0.30, // Adjust height of the effect
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFFFA7365),
+                      Color(0xFF9A4DFF)
+                    ], // Gradient colors
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                 ),
               ),
             ),
-          ),
-          Padding(
-            padding: EdgeInsets.only(top: height / 9.5), // Adjust for gradient
-            child: Container(
-              height: height,
-              width: width,
-              decoration: BoxDecoration(
-                color: Colors.white54.withOpacity(0.30),
-                borderRadius: BorderRadius.circular(45.0),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Container(
-                  width: width,
-                  height: height,
-                  decoration: BoxDecoration(
-                    color: Colors.white54.withOpacity(0.20),
-                    borderRadius: BorderRadius.circular(45.0),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 10.0),
-                    child: Container(
-                      width: width,
-                      height: height,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(45.0),
-                      ),
-                      child: Padding(
-                          padding: const EdgeInsets.only(top: 5.0),
-                          child: Column(
-                            children: <Widget>[
-                              SizedBox(
-                                height: 40,
-                              ),
-                              Container(
-                                // color: Colors.cyan,
-                                width: 350,
-                                height: 60,
-                                child: TextFormField(
-                                  controller: _phoneController,
-                                  keyboardType: TextInputType.phone,
-                                  decoration: InputDecoration(
-                                    filled: true,
-                                    fillColor: Colors
-                                        .grey.shade200, // Grey inside color
-                                    hintText: 'Kitchen Cylinder',
-                                    hintStyle:  AppStyles.customTextStyle(
-                                        fontSize: 13.0,
-                                        fontWeight:
-                                        FontWeight.w400),
-                                    prefixIcon: Container(
-                                      padding: const EdgeInsets.only(
-                                          right: 10.0, left: 10),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          SizedBox(width: 8),
-                                        ],
-                                      ),
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8.0),
-                                      borderSide:
-                                          BorderSide.none, // Transparent border
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8.0),
-                                      borderSide:
-                                          BorderSide.none, // Transparent border
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8.0),
-                                      borderSide:
-                                          BorderSide.none, // Transparent border
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        vertical: 16, horizontal: 12),
-                                  ),
-                                  validator: _validatePhoneNumber,
+            Padding(
+              padding: EdgeInsets.only(top: height / 9.5), // Adjust for gradient
+              child: Container(
+                height: height,
+                width: width,
+                decoration: BoxDecoration(
+                  color: Colors.white54.withOpacity(0.30),
+                  borderRadius: BorderRadius.circular(45.0),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Container(
+                    width: width,
+                    height: height,
+                    decoration: BoxDecoration(
+                      color: Colors.white54.withOpacity(0.20),
+                      borderRadius: BorderRadius.circular(45.0),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 10.0),
+                      child: Container(
+                        width: width,
+                        height: height,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(45.0),
+                        ),
+                        child: Padding(
+                            padding: const EdgeInsets.only(top: 5.0),
+                            child: Column(
+                              children: <Widget>[
+                                SizedBox(
+                                  height: 40,
                                 ),
-                              ),
-                              const SizedBox(height: 20),
-                              Container(
-                                // color: Colors.cyan,
-                                width: 350,
-                                height: 60,
-                                child: TextFormField(
-                                  controller: _phoneController,
-                                  keyboardType: TextInputType.phone,
-                                  decoration: InputDecoration(
-                                    filled: true,
-                                    fillColor: Colors
-                                        .grey.shade200, // Grey inside color
-                                    hintText: 'Hp Gas',
-                                    hintStyle: AppStyles.customTextStyle(
-                                        fontSize: 13.0,
-                                        fontWeight:
-                                        FontWeight.w400),
-                                    prefixIcon: Container(
-                                      padding: const EdgeInsets.only(
-                                          right: 10.0, left: 10),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          SizedBox(width: 8),
-                                        ],
+                                Container(
+                                  // color: Colors.cyan,
+                                  width: 350,
+                                  height: 60,
+                                  child: TextFormField(
+                                    controller: _deviceNameController,
+                                    keyboardType: TextInputType.text,
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor: Colors
+                                          .grey.shade200, // Grey inside color
+                                      hintText: 'Kitchen Cylinder',
+                                      hintStyle:  AppStyles.customTextStyle(
+                                          fontSize: 13.0,
+                                          fontWeight:
+                                          FontWeight.w400),
+                                      prefixIcon: Container(
+                                        padding: const EdgeInsets.only(
+                                            right: 10.0, left: 10),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            SizedBox(width: 8),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8.0),
-                                      borderSide:
-                                          BorderSide.none, // Transparent border
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8.0),
-                                      borderSide:
-                                          BorderSide.none, // Transparent border
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8.0),
-                                      borderSide:
-                                          BorderSide.none, // Transparent border
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        vertical: 16, horizontal: 12),
-                                  ),
-                                  validator: _validatePhoneNumber,
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              Container(
-                                // color: Colors.cyan,
-                                width: 350,
-                                height: 60,
-                                child: TextFormField(
-                                  controller: _phoneController,
-                                  keyboardType: TextInputType.phone,
-                                  decoration: InputDecoration(
-                                    filled: true,
-                                    fillColor: Colors
-                                        .grey.shade200, // Grey inside color
-                                    hintText: '3782037',
-                                    hintStyle: AppStyles.customTextStyle(
-                                        fontSize: 13.0,
-                                        fontWeight:
-                                        FontWeight.w400),
-                                    prefixIcon: Container(
-                                      padding: const EdgeInsets.only(
-                                          right: 10.0, left: 10),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          SizedBox(width: 8),
-                                        ],
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8.0),
+                                        borderSide:
+                                            BorderSide.none, // Transparent border
                                       ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8.0),
+                                        borderSide:
+                                            BorderSide.none, // Transparent border
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8.0),
+                                        borderSide:
+                                            BorderSide.none, // Transparent border
+                                      ),
+                                      contentPadding: const EdgeInsets.symmetric(
+                                          vertical: 16, horizontal: 12),
                                     ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8.0),
-                                      borderSide:
-                                          BorderSide.none, // Transparent border
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8.0),
-                                      borderSide:
-                                          BorderSide.none, // Transparent border
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8.0),
-                                      borderSide:
-                                          BorderSide.none, // Transparent border
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        vertical: 16, horizontal: 12),
+                                    validator: _validatePhoneNumber,
                                   ),
-                                  validator: _validatePhoneNumber,
                                 ),
-                              ),
-                              Stack(
-                                alignment: Alignment
-                                    .topCenter, // Aligns children in the center of the stack
-                                children: [
-                                  Image.asset(
-                                    "assets/images/Splashscreen/building.png",
-                                    width: width,
-                                    height: height / 3.5,
-                                    color: Colors.grey,
-                                    fit: BoxFit.fitWidth,
+                                const SizedBox(height: 20),
+                                Container(
+                                  // color: Colors.cyan,
+                                  width: 350,
+                                  height: 60,
+                                  child: TextFormField(
+                                    controller: _gasCompanyNameController,
+                                    keyboardType: TextInputType.text,
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor: Colors
+                                          .grey.shade200, // Grey inside color
+                                      hintText: 'Hp Gas',
+                                      hintStyle: AppStyles.customTextStyle(
+                                          fontSize: 13.0,
+                                          fontWeight:
+                                          FontWeight.w400),
+                                      prefixIcon: Container(
+                                        padding: const EdgeInsets.only(
+                                            right: 10.0, left: 10),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            SizedBox(width: 8),
+                                          ],
+                                        ),
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8.0),
+                                        borderSide:
+                                            BorderSide.none, // Transparent border
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8.0),
+                                        borderSide:
+                                            BorderSide.none, // Transparent border
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8.0),
+                                        borderSide:
+                                            BorderSide.none, // Transparent border
+                                      ),
+                                      contentPadding: const EdgeInsets.symmetric(
+                                          vertical: 16, horizontal: 12),
+                                    ),
+                                    validator: _validatePhoneNumber,
                                   ),
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 20.0),
-                                    child: SizedBox(
-                                      width: 350,
-                                      child: ElevatedButton(
-                                        onPressed: () {
-                                          // if (Form.of(context)?.validate() ?? false) {
-                                          Navigator.pop(context);
-                                          // }
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor:AppStyles.cutstomIconColor, // Button background color
-                                          foregroundColor:
-                                              Colors.white, // Button text color
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                                12), // Curved edges
+                                ),
+                                const SizedBox(height: 20),
+                                Container(
+                                  // color: Colors.cyan,
+                                  width: 350,
+                                  height: 60,
+                                  child: TextFormField(
+                                    controller: _gasConsumerNumberController,
+                                    keyboardType: TextInputType.phone,
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor: Colors
+                                          .grey.shade200, // Grey inside color
+                                      hintText: '3782037',
+                                      hintStyle: AppStyles.customTextStyle(
+                                          fontSize: 13.0,
+                                          fontWeight:
+                                          FontWeight.w400),
+                                      prefixIcon: Container(
+                                        padding: const EdgeInsets.only(
+                                            right: 10.0, left: 10),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            SizedBox(width: 8),
+                                          ],
+                                        ),
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8.0),
+                                        borderSide:
+                                            BorderSide.none, // Transparent border
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8.0),
+                                        borderSide:
+                                            BorderSide.none, // Transparent border
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8.0),
+                                        borderSide:
+                                            BorderSide.none, // Transparent border
+                                      ),
+                                      contentPadding: const EdgeInsets.symmetric(
+                                          vertical: 16, horizontal: 12),
+                                    ),
+                                    validator: _validatePhoneNumber,
+                                  ),
+                                ),
+                                Stack(
+                                  alignment: Alignment
+                                      .topCenter, // Aligns children in the center of the stack
+                                  children: [
+                                    Image.asset(
+                                      "assets/images/Splashscreen/building.png",
+                                      width: width,
+                                      height: height / 3.5,
+                                      color: Colors.grey,
+                                      fit: BoxFit.fitWidth,
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 20.0),
+                                      child: SizedBox(
+                                        width: 350,
+                                        child: ElevatedButton(
+                                          onPressed: () {
+                                            // if (Form.of(context)?.validate() ?? false) {
+                                            Navigator.pop(context);
+                                            // }
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:AppStyles.cutstomIconColor, // Button background color
+                                            foregroundColor:
+                                                Colors.white, // Button text color
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(
+                                                  12), // Curved edges
+                                            ),
+                                            minimumSize: const Size(200, 50),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 30,
+                                                vertical:
+                                                    15), // Adjust button size
+                                            elevation: 5, // Elevation (shadow)
                                           ),
-                                          minimumSize: const Size(200, 50),
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 30,
-                                              vertical:
-                                                  15), // Adjust button size
-                                          elevation: 5, // Elevation (shadow)
-                                        ),
-                                        child:  Text(
-                                          'Update',
-                                          style: AppStyles.customTextStyle(
-                                              fontSize: 15.0,
-                                              fontWeight:
-                                              FontWeight.w500),
+                                          child:  Text(
+                                            'Update',
+                                            style: AppStyles.customTextStyle(
+                                                fontSize: 15.0,
+                                                fontWeight:
+                                                FontWeight.w500),
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          )),
+                                  ],
+                                ),
+                              ],
+                            )),
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

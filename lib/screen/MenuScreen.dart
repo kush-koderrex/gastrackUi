@@ -4,12 +4,37 @@ import 'package:gas_track_ui/screen/CylinderDetailScreen.dart';
 import 'package:gas_track_ui/screen/EditProfile.dart';
 import 'package:gas_track_ui/screen/Firmware.dart';
 import 'package:gas_track_ui/utils/utils.dart';
+import 'package:slidable_button/slidable_button.dart';
+import 'package:slider_button/slider_button.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
 
   @override
   State<MenuScreen> createState() => _MenuScreenState();
+}
+Color blendWithWhite(Color color, [double amount = 0.2]) => Color.fromARGB(
+    color.alpha,
+    color.red + ((255 - color.red) * amount).round(),
+    color.green + ((255 - color.green) * amount).round(),
+    color.blue + ((255 - color.blue) * amount).round());
+
+Future<void> _launchEmail(String email, String subject, String body) async {
+  final Uri emailUri = Uri(
+    scheme: 'mailto',
+    path: email,
+    queryParameters: {
+      'subject': subject,
+      'body': body,
+    },
+  );
+
+  if (await canLaunchUrl(emailUri)) {
+    await launchUrl(emailUri);
+  } else {
+    print('Could not launch email client');
+  }
 }
 
 class _MenuScreenState extends State<MenuScreen> {
@@ -315,22 +340,27 @@ class _MenuScreenState extends State<MenuScreen> {
                                           fontSize: 15.0,
                                           fontWeight: FontWeight.w500),
                                     ),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.mail,
-                                          color: AppStyles.cutstomIconColor,
-                                        ),
-                                        SizedBox(
-                                          width: 5,
-                                        ),
-                                        Text(
-                                          "gastrack.india@gmail.com",
-                                          style: AppStyles.customTextStyle(
-                                              fontSize: 14.0,
-                                              fontWeight: FontWeight.w400),
-                                        ),
-                                      ],
+                                    InkWell(
+                                      onTap: (){
+                                        _launchEmail('example@example.com', 'Hello from Flutter', 'This is a test email.');
+                                      },
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.mail,
+                                            color: AppStyles.cutstomIconColor,
+                                          ),
+                                          SizedBox(
+                                            width: 5,
+                                          ),
+                                          Text(
+                                            "gastrack.india@gmail.com",
+                                            style: AppStyles.customTextStyle(
+                                                fontSize: 14.0,
+                                                fontWeight: FontWeight.w400),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -371,13 +401,13 @@ class _MenuScreenState extends State<MenuScreen> {
         break;
       case "Device Sound":
         // Toggle sound settings or perform an action
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Device Sound tapped")));
+        // ScaffoldMessenger.of(context)
+        //     .showSnackBar(SnackBar(content: Text("Device Sound tapped")));
         break;
       case "Auto Booking":
         // Navigate to auto booking options or perform an action
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Auto Booking tapped")));
+        // ScaffoldMessenger.of(context)
+        //     .showSnackBar(SnackBar(content: Text("Auto Booking tapped")));
         break;
       case "Firmware Update":
         // Trigger firmware update or perform an action
@@ -444,6 +474,7 @@ class TopRoundedRectangleClipper extends CustomClipper<Path> {
 }
 
 
+
 void showCustomDialogRest(BuildContext context) {
   showDialog(
     context: context,
@@ -486,11 +517,10 @@ void showCustomDialogRest(BuildContext context) {
                 child: Center(
                   child: Text(
                     'Are you sure you want to Reset device?',
-                    style:  AppStyles.customTextStyle(
-                        fontSize: 22.0,
-                        fontWeight:
-                        FontWeight.w700),
-                    textAlign: TextAlign.center, // Center the text if it's multiline
+                    style: AppStyles.customTextStyle(
+                        fontSize: 22.0, fontWeight: FontWeight.w700),
+                    textAlign:
+                    TextAlign.center, // Center the text if it's multiline
                   ),
                 ),
               ),
@@ -502,40 +532,347 @@ void showCustomDialogRest(BuildContext context) {
                 child: Center(
                   child: Text(
                     'By choosing to reset, you will restore the device to factory settings',
-                    style:  AppStyles.customTextStyle(
-                        fontSize: 13.0,
-                        fontWeight:
-                        FontWeight.w400),
-                    textAlign: TextAlign.center, // Center the text if it's multiline
+                    style: AppStyles.customTextStyle(
+                        fontSize: 13.0, fontWeight: FontWeight.w400),
+                    textAlign:
+                    TextAlign.center, // Center the text if it's multiline
                   ),
                 ),
               ),
               SizedBox(height: 20),
               // Done Button
+
+              // SizedBox(
+              //   width: 300,
+              //   height: 50,
+              //   child: HorizontalSlidableButton(
+              //     borderRadius: BorderRadius.circular(12),
+              //     width: MediaQuery.of(context).size.width / 3,
+              //     buttonWidth: 60.0,
+              //     color: AppStyles.cutstomIconColor,
+              //     // buttonColor: Theme.of(context).primaryColor,
+              //     buttonColor: blendWithWhite(AppStyles.cutstomIconColor, 0.3),
+              //     // backgroundColor: AppStyles.cutstomIconColor,
+              //     dismissible: false,
+              //     label: Center(
+              //         child: Icon(
+              //           Icons.recycling,
+              //           color: Colors.white,
+              //         )),
+              //     initialPosition: SlidableButtonPosition
+              //         .center, // Set the initial position to middle
+              //     child: Padding(
+              //       padding: const EdgeInsets.all(8.0),
+              //       child: Row(
+              //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              //         children: [
+              //           Container(
+              //             child: RichText(
+              //               text: TextSpan(
+              //                 text:
+              //                 'Calibrate', // This is the first part of the text
+              //                 style: AppStyles.customTextStyle(
+              //                   fontSize: 13.0,
+              //                   fontWeight: FontWeight.w400,
+              //                 ),
+              //                 children: <InlineSpan>[
+              //                   WidgetSpan(
+              //                     alignment: PlaceholderAlignment.middle,
+              //                     child: SizedBox(
+              //                       width:
+              //                       10, // Adjust this value to reduce spacing
+              //                       child: Icon(
+              //                         Icons.chevron_left,
+              //                         color: Colors.white,
+              //                         size: 30.0,
+              //                       ),
+              //                     ),
+              //                   ),
+              //                   WidgetSpan(
+              //                     alignment: PlaceholderAlignment.middle,
+              //                     child: SizedBox(
+              //                       width:
+              //                       10, // Adjust this value to reduce spacing
+              //                       child: Icon(
+              //                         Icons.chevron_left,
+              //                         color: Colors.white.withOpacity(.8),
+              //                         size: 30.0,
+              //                       ),
+              //                     ),
+              //                   ),
+              //                   WidgetSpan(
+              //                     alignment: PlaceholderAlignment.middle,
+              //                     child: SizedBox(
+              //                       width:
+              //                       10, // Adjust this value to reduce spacing
+              //                       child: Icon(
+              //                         Icons.chevron_left,
+              //                         color: Colors.white.withOpacity(.6),
+              //                         size: 30.0,
+              //                       ),
+              //                     ),
+              //                   ),
+              //                 ],
+              //               ),
+              //             ),
+              //           ),
+              //           Container(
+              //             child: RichText(
+              //               // textAlign: TextAlign.end, // Align text to the start for left-to-right layout
+              //               text: TextSpan(
+              //                 children: <InlineSpan>[
+              //                   WidgetSpan(
+              //                     alignment: PlaceholderAlignment.middle,
+              //                     child: SizedBox(
+              //                       width:
+              //                       10, // Adjust this value to reduce spacing
+              //                       child: Icon(
+              //                         Icons.chevron_right,
+              //                         color: Colors.white.withOpacity(.6),
+              //                         size: 30.0,
+              //                       ),
+              //                     ),
+              //                   ),
+              //                   WidgetSpan(
+              //                     alignment: PlaceholderAlignment.middle,
+              //                     child: SizedBox(
+              //                       width:
+              //                       10, // Adjust this value to reduce spacing
+              //                       child: Icon(
+              //                         Icons.chevron_right,
+              //                         color: Colors.white.withOpacity(.8),
+              //                         size: 30.0,
+              //                       ),
+              //                     ),
+              //                   ),
+              //                   WidgetSpan(
+              //                     alignment: PlaceholderAlignment.middle,
+              //                     child: SizedBox(
+              //                       width:
+              //                       10, // Adjust this value to reduce spacing
+              //                       child: Icon(
+              //                         Icons.chevron_right,
+              //                         color: Colors.white,
+              //                         size: 30.0,
+              //                       ),
+              //                     ),
+              //                   ),
+              //                   TextSpan(
+              //                     text:
+              //                     '           Reset', // This is the first part of the text
+              //                     style: AppStyles.customTextStyle(
+              //                       fontSize: 13.0,
+              //                       fontWeight: FontWeight.w400,
+              //                     ),
+              //                   ),
+              //                 ],
+              //               ),
+              //             ),
+              //           )
+              //         ],
+              //       ),
+              //     ),
+              //     onChanged: (position) async {
+              //       if (position == SlidableButtonPosition.end) {
+              //         print("Reset");
+              //         Navigator.of(context).pop();
+              //       } else if (position == SlidableButtonPosition.start) {
+              //         print("Calibrate");
+              //         Navigator.of(context).pop();
+              //       } else {
+              //         // result = 'Button is in the middle';
+              //       }
+              //     },
+              //   ),
+              //
+              //   // ElevatedButton(
+              //   //   onPressed: () async {
+              //   //     Navigator.of(context).pop();
+              //   //     // await Future.delayed(Duration(seconds: 3));
+              //   //   },
+              //   //   style: ElevatedButton.styleFrom(
+              //   //     backgroundColor:
+              //   //     AppStyles.cutstomIconColor, // Button background color
+              //   //     foregroundColor: Colors.white, // Button text color
+              //   //     shape: RoundedRectangleBorder(
+              //   //       borderRadius: BorderRadius.circular(12), // Curved edges
+              //   //     ),
+              //   //     minimumSize: const Size(200, 50),
+              //   //     padding: const EdgeInsets.symmetric(
+              //   //         horizontal: 30, vertical: 15), // Adjust button size
+              //   //     elevation: 5, // Elevation (shadow)
+              //   //   ),
+              //   //   child: const Text(
+              //   //     'Done',
+              //   //     style: TextStyle(fontSize: 16),
+              //   //   ),
+              //   // ),
+              // ),
               SizedBox(
-                width: 250,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    Navigator.of(context).pop();
-                    // await Future.delayed(Duration(seconds: 3));
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                    AppStyles.cutstomIconColor, // Button background color
-                    foregroundColor: Colors.white, // Button text color
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12), // Curved edges
+                width: 300,
+                height: 50,
+                child: HorizontalSlidableButton(
+                  borderRadius: BorderRadius.circular(12),
+                  width: MediaQuery.of(context).size.width / 3,
+                  buttonWidth: 60.0,
+                  color: AppStyles.cutstomIconColor,
+                  // buttonColor: Theme.of(context).primaryColor,
+                  buttonColor: blendWithWhite(AppStyles.cutstomIconColor, 0.3),
+                  // backgroundColor: AppStyles.cutstomIconColor,
+                  dismissible: false,
+                  label: Center(
+                      child: Icon(
+                        Icons.recycling,
+                        color: Colors.white,
+                      )),
+                  initialPosition: SlidableButtonPosition
+                      .center, // Set the initial position to middle
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          child: RichText(
+                            text: TextSpan(
+                              text:
+                              'Calibrate', // This is the first part of the text
+                              style: AppStyles.customTextStyle(
+                                fontSize: 13.0,
+                                fontWeight: FontWeight.w400,
+                              ),
+                              children: <InlineSpan>[
+                                WidgetSpan(
+                                  alignment: PlaceholderAlignment.middle,
+                                  child: SizedBox(
+                                    width:
+                                    10, // Adjust this value to reduce spacing
+                                    child: Icon(
+                                      Icons.chevron_left,
+                                      color: Colors.white,
+                                      size: 30.0,
+                                    ),
+                                  ),
+                                ),
+                                WidgetSpan(
+                                  alignment: PlaceholderAlignment.middle,
+                                  child: SizedBox(
+                                    width:
+                                    10, // Adjust this value to reduce spacing
+                                    child: Icon(
+                                      Icons.chevron_left,
+                                      color: Colors.white.withOpacity(.8),
+                                      size: 30.0,
+                                    ),
+                                  ),
+                                ),
+                                WidgetSpan(
+                                  alignment: PlaceholderAlignment.middle,
+                                  child: SizedBox(
+                                    width:
+                                    10, // Adjust this value to reduce spacing
+                                    child: Icon(
+                                      Icons.chevron_left,
+                                      color: Colors.white.withOpacity(.6),
+                                      size: 30.0,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Container(
+                          child: RichText(
+                            // textAlign: TextAlign.end, // Align text to the start for left-to-right layout
+                            text: TextSpan(
+                              children: <InlineSpan>[
+                                WidgetSpan(
+                                  alignment: PlaceholderAlignment.middle,
+                                  child: SizedBox(
+                                    width:
+                                    10, // Adjust this value to reduce spacing
+                                    child: Icon(
+                                      Icons.chevron_right,
+                                      color: Colors.white.withOpacity(.6),
+                                      size: 30.0,
+                                    ),
+                                  ),
+                                ),
+                                WidgetSpan(
+                                  alignment: PlaceholderAlignment.middle,
+                                  child: SizedBox(
+                                    width:
+                                    10, // Adjust this value to reduce spacing
+                                    child: Icon(
+                                      Icons.chevron_right,
+                                      color: Colors.white.withOpacity(.8),
+                                      size: 30.0,
+                                    ),
+                                  ),
+                                ),
+                                WidgetSpan(
+                                  alignment: PlaceholderAlignment.middle,
+                                  child: SizedBox(
+                                    width:
+                                    10, // Adjust this value to reduce spacing
+                                    child: Icon(
+                                      Icons.chevron_right,
+                                      color: Colors.white,
+                                      size: 30.0,
+                                    ),
+                                  ),
+                                ),
+                                TextSpan(
+                                  text:
+                                  '           Reset', // This is the first part of the text
+                                  style: AppStyles.customTextStyle(
+                                    fontSize: 13.0,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      ],
                     ),
-                    minimumSize: const Size(200, 50),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 30, vertical: 15), // Adjust button size
-                    elevation: 5, // Elevation (shadow)
                   ),
-                  child: const Text(
-                    'Done',
-                    style: TextStyle(fontSize: 16),
-                  ),
+                  onChanged: (position) async {
+                    if (position == SlidableButtonPosition.end) {
+                      print("Reset");
+                      Navigator.of(context).pop();
+                    } else if (position == SlidableButtonPosition.start) {
+                      print("Calibrate");
+                      Navigator.of(context).pop();
+                    } else {
+                      // result = 'Button is in the middle';
+                    }
+                  },
                 ),
+
+                // ElevatedButton(
+                //   onPressed: () async {
+                //     Navigator.of(context).pop();
+                //     // await Future.delayed(Duration(seconds: 3));
+                //   },
+                //   style: ElevatedButton.styleFrom(
+                //     backgroundColor:
+                //     AppStyles.cutstomIconColor, // Button background color
+                //     foregroundColor: Colors.white, // Button text color
+                //     shape: RoundedRectangleBorder(
+                //       borderRadius: BorderRadius.circular(12), // Curved edges
+                //     ),
+                //     minimumSize: const Size(200, 50),
+                //     padding: const EdgeInsets.symmetric(
+                //         horizontal: 30, vertical: 15), // Adjust button size
+                //     elevation: 5, // Elevation (shadow)
+                //   ),
+                //   child: const Text(
+                //     'Done',
+                //     style: TextStyle(fontSize: 16),
+                //   ),
+                // ),
               ),
             ],
           ),
@@ -555,7 +892,7 @@ void showCustomDialog(BuildContext context) {
         ),
         child: Container(
           padding: EdgeInsets.all(20),
-          height: 300,
+          height: 350,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -587,11 +924,10 @@ void showCustomDialog(BuildContext context) {
                 child: Center(
                   child: Text(
                     'Are you sure you want to Delete device?',
-                    style:  AppStyles.customTextStyle(
-                        fontSize: 22.0,
-                        fontWeight:
-                        FontWeight.w700),
-                    textAlign: TextAlign.center, // Center the text if it's multiline
+                    style: AppStyles.customTextStyle(
+                        fontSize: 22.0, fontWeight: FontWeight.w700),
+                    textAlign:
+                    TextAlign.center, // Center the text if it's multiline
                   ),
                 ),
               ),
@@ -603,41 +939,174 @@ void showCustomDialog(BuildContext context) {
                 child: Center(
                   child: Text(
                     'By choosing to delete, the device will be permanently removed and you will lose all data',
-                    style:  AppStyles.customTextStyle(
-                        fontSize: 13.0,
-                        fontWeight:
-                        FontWeight.w400),
-                    textAlign: TextAlign.center, // Center the text if it's multiline
+                    style: AppStyles.customTextStyle(
+                        fontSize: 13.0, fontWeight: FontWeight.w400),
+                    textAlign:
+                    TextAlign.center, // Center the text if it's multiline
                   ),
                 ),
               ),
               SizedBox(height: 20),
               // Done Button
               SizedBox(
-                width: 250,
-                child: ElevatedButton(
-                  onPressed: () async {
+                width: 300,
+                height: 60,
+                child: SliderButton(
+                  action: () async {
+                    // Perform some action when the slider is completed
                     Navigator.of(context).pop();
-                    // await Future.delayed(Duration(seconds: 3));
+                    return true;
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        AppStyles.cutstomIconColor, // Button background color
-                    foregroundColor: Colors.white, // Button text color
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12), // Curved edges
+
+                  // Label text for the slider
+                  label: RichText(
+                    text: TextSpan(
+                      text:
+                      'Delete Device       ', // This is the first part of the text
+                      style: AppStyles.customTextStyle(
+                        fontSize: 13.0,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      children: <InlineSpan>[
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.middle,
+                          child: SizedBox(
+                            width: 10, // Adjust this value to reduce spacing
+                            child: Icon(
+                              Icons.chevron_right,
+                              color: Colors.white.withOpacity(.4),
+                              size: 30.0,
+                            ),
+                          ),
+                        ),
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.middle,
+                          child: SizedBox(
+                            width: 10, // Adjust this value to reduce spacing
+                            child: Icon(
+                              Icons.chevron_right,
+                              color: Colors.white.withOpacity(.6),
+                              size: 30.0,
+                            ),
+                          ),
+                        ),
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.middle,
+                          child: SizedBox(
+                            width: 10, // Adjust this value to reduce spacing
+                            child: Icon(
+                              Icons.chevron_right,
+                              color: Colors.white.withOpacity(.8),
+                              size: 30.0,
+                            ),
+                          ),
+                        ),
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.middle,
+                          child: SizedBox(
+                            width: 10, // Adjust this value to reduce spacing
+                            child: Icon(
+                              Icons.chevron_right,
+                              color: Colors.white,
+                              size: 30.0,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    minimumSize: const Size(200, 50),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 30, vertical: 15), // Adjust button size
-                    elevation: 5, // Elevation (shadow)
                   ),
-                  child: const Text(
-                    'Done',
-                    style: TextStyle(fontSize: 16),
+                  // Text(
+                  //   "Delete Device         >>>",
+                  //   style: AppStyles.customTextStyle(
+                  //     fontSize: 13.0,
+                  //     fontWeight: FontWeight.w400,
+                  //   ),
+                  // ),
+
+                  // Icon for the slider button
+                  icon: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Center(
+                      child: Icon(
+                        Icons.delete_rounded,
+                        color: Colors.white,
+                        size: 30.0,
+                        semanticLabel: 'Delete device icon',
+                      ),
+                    ),
                   ),
+
+                  // Customize the colors and sizes here
+                  width: 230,
+                  radius: 15,
+                  // buttonColor: AppStyles.cutstomIconColor.withOpacity(1.0),
+                  vibrationFlag: true,
+                  buttonSize: 50,
+                  // buttonColor: AppStyles.cutstomIconColor.withOpacity(0.99),
+                  buttonColor: blendWithWhite(AppStyles.cutstomIconColor, 0.3),
+                  backgroundColor: AppStyles.cutstomIconColor,
+                  highlightedColor: Colors.white,
+                  baseColor: Colors.white,
                 ),
               ),
+
+              // SizedBox(
+              //   width: 250,
+              //   child:SliderButton(
+              //     action: () async{
+              //       ///Do something here OnSlide
+              //       Navigator.of(context).pop();
+              //       return true;
+              //     },
+              //
+              //     ///Put label over here
+              //     label: Text(
+              //       "Delete Device    >>>",
+              //       style: AppStyles.customTextStyle(
+              //           fontSize: 13.0,
+              //           fontWeight:
+              //           FontWeight.w400),
+              //     ),
+              //     icon: Center(
+              //         child: Icon(
+              //           Icons.delete_rounded,
+              //           color: Colors.white,
+              //           size: 30.0,
+              //           semanticLabel: 'Text to announce in accessibility modes',
+              //         )),
+              //
+              //     ///Change All the color and size from here.
+              //     width: 230,
+              //     radius: 10,
+              //     buttonColor: AppStyles.cutstomIconColor,
+              //     backgroundColor: AppStyles.cutstomIconColor,
+              //     highlightedColor: Colors.white,
+              //     baseColor: Colors.white,
+              //   ),
+              //
+              //   // ElevatedButton(
+              //   //   onPressed: () async {
+              //   //     Navigator.of(context).pop();
+              //   //     // await Future.delayed(Duration(seconds: 3));
+              //   //   },
+              //   //   style: ElevatedButton.styleFrom(
+              //   //     backgroundColor:
+              //   //         AppStyles.cutstomIconColor, // Button background color
+              //   //     foregroundColor: Colors.white, // Button text color
+              //   //     shape: RoundedRectangleBorder(
+              //   //       borderRadius: BorderRadius.circular(12), // Curved edges
+              //   //     ),
+              //   //     minimumSize: const Size(200, 50),
+              //   //     padding: const EdgeInsets.symmetric(
+              //   //         horizontal: 30, vertical: 15), // Adjust button size
+              //   //     elevation: 5, // Elevation (shadow)
+              //   //   ),
+              //   //   child: const Text(
+              //   //     'Done',
+              //   //     style: TextStyle(fontSize: 16),
+              //   //   ),
+              //   // ),
+              // ),
             ],
           ),
         ),
@@ -645,3 +1114,205 @@ void showCustomDialog(BuildContext context) {
     },
   );
 }
+
+// void showCustomDialogRest(BuildContext context) {
+//   showDialog(
+//     context: context,
+//     builder: (BuildContext context) {
+//       return Dialog(
+//         shape: RoundedRectangleBorder(
+//           borderRadius: BorderRadius.circular(20),
+//         ),
+//         child: Container(
+//           padding: EdgeInsets.all(20),
+//           height: 300,
+//           decoration: BoxDecoration(
+//             borderRadius: BorderRadius.circular(20),
+//           ),
+//           child: Column(
+//             mainAxisAlignment: MainAxisAlignment.center,
+//             crossAxisAlignment: CrossAxisAlignment.center,
+//             children: <Widget>[
+//               InkWell(
+//                 onTap: () {
+//                   Navigator.of(context).pop();
+//                 },
+//                 child: Container(
+//                   width: double.infinity,
+//                   child: Align(
+//                     alignment: Alignment.centerRight,
+//                     child: Icon(
+//                       Icons.cancel,
+//                       size: 35,
+//                       color: AppStyles.cutstomIconColor,
+//                     ),
+//                   ),
+//                 ),
+//               ),
+//               SizedBox(height: 10),
+//               // Name
+//               Container(
+//                 // Optional: Add padding or margin if needed
+//                 // padding: EdgeInsets.all(10), // Adds some padding around the text
+//                 child: Center(
+//                   child: Text(
+//                     'Are you sure you want to Reset device?',
+//                     style:  AppStyles.customTextStyle(
+//                         fontSize: 22.0,
+//                         fontWeight:
+//                         FontWeight.w700),
+//                     textAlign: TextAlign.center, // Center the text if it's multiline
+//                   ),
+//                 ),
+//               ),
+//
+//               SizedBox(height: 20),
+//               Container(
+//                 // Optional: Add padding or margin if needed
+//                 // padding: EdgeInsets.all(10), // Adds some padding around the text
+//                 child: Center(
+//                   child: Text(
+//                     'By choosing to reset, you will restore the device to factory settings',
+//                     style:  AppStyles.customTextStyle(
+//                         fontSize: 13.0,
+//                         fontWeight:
+//                         FontWeight.w400),
+//                     textAlign: TextAlign.center, // Center the text if it's multiline
+//                   ),
+//                 ),
+//               ),
+//               SizedBox(height: 20),
+//               // Done Button
+//               SizedBox(
+//                 width: 250,
+//                 child: ElevatedButton(
+//                   onPressed: () async {
+//                     Navigator.of(context).pop();
+//                     // await Future.delayed(Duration(seconds: 3));
+//                   },
+//                   style: ElevatedButton.styleFrom(
+//                     backgroundColor:
+//                     AppStyles.cutstomIconColor, // Button background color
+//                     foregroundColor: Colors.white, // Button text color
+//                     shape: RoundedRectangleBorder(
+//                       borderRadius: BorderRadius.circular(12), // Curved edges
+//                     ),
+//                     minimumSize: const Size(200, 50),
+//                     padding: const EdgeInsets.symmetric(
+//                         horizontal: 30, vertical: 15), // Adjust button size
+//                     elevation: 5, // Elevation (shadow)
+//                   ),
+//                   child: const Text(
+//                     'Done',
+//                     style: TextStyle(fontSize: 16),
+//                   ),
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//       );
+//     },
+//   );
+// }
+//
+// void showCustomDialog(BuildContext context) {
+//   showDialog(
+//     context: context,
+//     builder: (BuildContext context) {
+//       return Dialog(
+//         shape: RoundedRectangleBorder(
+//           borderRadius: BorderRadius.circular(20),
+//         ),
+//         child: Container(
+//           padding: EdgeInsets.all(20),
+//           height: 300,
+//           decoration: BoxDecoration(
+//             borderRadius: BorderRadius.circular(20),
+//           ),
+//           child: Column(
+//             mainAxisAlignment: MainAxisAlignment.center,
+//             crossAxisAlignment: CrossAxisAlignment.center,
+//             children: <Widget>[
+//               InkWell(
+//                 onTap: () {
+//                   Navigator.of(context).pop();
+//                 },
+//                 child: Container(
+//                   width: double.infinity,
+//                   child: Align(
+//                     alignment: Alignment.centerRight,
+//                     child: Icon(
+//                       Icons.cancel,
+//                       size: 35,
+//                       color: AppStyles.cutstomIconColor,
+//                     ),
+//                   ),
+//                 ),
+//               ),
+//               SizedBox(height: 10),
+//               // Name
+//               Container(
+//                 // Optional: Add padding or margin if needed
+//                 // padding: EdgeInsets.all(10), // Adds some padding around the text
+//                 child: Center(
+//                   child: Text(
+//                     'Are you sure you want to Delete device?',
+//                     style:  AppStyles.customTextStyle(
+//                         fontSize: 22.0,
+//                         fontWeight:
+//                         FontWeight.w700),
+//                     textAlign: TextAlign.center, // Center the text if it's multiline
+//                   ),
+//                 ),
+//               ),
+//
+//               SizedBox(height: 20),
+//               Container(
+//                 // Optional: Add padding or margin if needed
+//                 // padding: EdgeInsets.all(10), // Adds some padding around the text
+//                 child: Center(
+//                   child: Text(
+//                     'By choosing to delete, the device will be permanently removed and you will lose all data',
+//                     style:  AppStyles.customTextStyle(
+//                         fontSize: 13.0,
+//                         fontWeight:
+//                         FontWeight.w400),
+//                     textAlign: TextAlign.center, // Center the text if it's multiline
+//                   ),
+//                 ),
+//               ),
+//               SizedBox(height: 20),
+//               // Done Button
+//               SizedBox(
+//                 width: 250,
+//                 child: ElevatedButton(
+//                   onPressed: () async {
+//                     Navigator.of(context).pop();
+//                     // await Future.delayed(Duration(seconds: 3));
+//                   },
+//                   style: ElevatedButton.styleFrom(
+//                     backgroundColor:
+//                         AppStyles.cutstomIconColor, // Button background color
+//                     foregroundColor: Colors.white, // Button text color
+//                     shape: RoundedRectangleBorder(
+//                       borderRadius: BorderRadius.circular(12), // Curved edges
+//                     ),
+//                     minimumSize: const Size(200, 50),
+//                     padding: const EdgeInsets.symmetric(
+//                         horizontal: 30, vertical: 15), // Adjust button size
+//                     elevation: 5, // Elevation (shadow)
+//                   ),
+//                   child: const Text(
+//                     'Done',
+//                     style: TextStyle(fontSize: 16),
+//                   ),
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//       );
+//     },
+//   );
+// }

@@ -37,6 +37,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   @override
   void dispose() {
     controller?.dispose();
+    controller?.pauseCamera(); // Optional: Pause the camera before disposing
     super.dispose();
   }
 
@@ -208,6 +209,9 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                             width: 300,
                             child: ElevatedButton(
                               onPressed: () {
+
+                                controller?.pauseCamera();
+                                controller?.dispose();
                                 showCustomDialog(context);
                               },
                               style: ElevatedButton.styleFrom(
@@ -358,6 +362,8 @@ void showCustomDialog(BuildContext context) {
                   onPressed: () async {
                     // Navigator.of(context).pop();
                     // await Future.delayed(Duration(seconds: 3));
+
+
                     Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(

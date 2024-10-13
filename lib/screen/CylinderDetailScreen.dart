@@ -171,6 +171,7 @@ class _CylinderDetailScreenState extends State<CylinderDetailScreen>
                                               ],
                                             ),
                                             child: TabBar(
+                                              dividerHeight:0,
                                               controller: _tabController,
                                               onTap: (index) {
                                                 setState(() {
