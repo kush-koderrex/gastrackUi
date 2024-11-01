@@ -20,14 +20,15 @@ Color blendWithWhite(Color color, [double amount = 0.2]) => Color.fromARGB(
     color.green + ((255 - color.green) * amount).round(),
     color.blue + ((255 - color.blue) * amount).round());
 
+
 Future<void> _launchEmail(String email, String subject, String body) async {
   final Uri emailUri = Uri(
     scheme: 'mailto',
     path: email,
-    queryParameters: {
+    query: _encodeQueryParameters(<String, String>{
       'subject': subject,
       'body': body,
-    },
+    }),
   );
 
   if (await canLaunchUrl(emailUri)) {
@@ -35,6 +36,13 @@ Future<void> _launchEmail(String email, String subject, String body) async {
   } else {
     print('Could not launch email client');
   }
+}
+
+// Helper function to encode query parameters
+String? _encodeQueryParameters(Map<String, String> params) {
+  return params.entries
+      .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+      .join('&');
 }
 
 class _MenuScreenState extends State<MenuScreen> {
@@ -340,26 +348,29 @@ class _MenuScreenState extends State<MenuScreen> {
                                           fontSize: 15.0,
                                           fontWeight: FontWeight.w500),
                                     ),
-                                    InkWell(
-                                      onTap: (){
-                                        _launchEmail('example@example.com', 'Hello from Flutter', 'This is a test email.');
-                                      },
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            Icons.mail,
-                                            color: AppStyles.cutstomIconColor,
-                                          ),
-                                          SizedBox(
-                                            width: 5,
-                                          ),
-                                          Text(
-                                            "gastrack.india@gmail.com",
-                                            style: AppStyles.customTextStyle(
-                                                fontSize: 14.0,
-                                                fontWeight: FontWeight.w400),
-                                          ),
-                                        ],
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8.0),
+                                      child: InkWell(
+                                        onTap: (){
+                                          _launchEmail('gastrack.india@gmail.com', 'Hello from Gas Track', 'This is a test email.');
+                                        },
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.mail,
+                                              color: AppStyles.cutstomIconColor,
+                                            ),
+                                            SizedBox(
+                                              width: 5,
+                                            ),
+                                            Text(
+                                              "gastrack.india@gmail.com",
+                                              style: AppStyles.customTextStyle(
+                                                  fontSize: 14.0,
+                                                  fontWeight: FontWeight.w400),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ],

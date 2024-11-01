@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:gas_track_ui/permissions/bluetooth_off_screen.dart';
 import 'package:gas_track_ui/screen/AddManuallyDevice.dart';
+import 'package:gas_track_ui/screen/AddYouDevice.dart';
 
 import 'package:gas_track_ui/screen/FirmwareUpdateScreen.dart';
 import 'package:gas_track_ui/screen/HomeScreen.dart';
@@ -46,8 +47,8 @@ class _MyAppState extends State<MyApp> {
   static const String otpscreen = 'otpscreen';
   static const String homescreen = 'homescreen';
   static const String firmwareUpdateScreen = 'firmwareUpdateScreen';
-  static const String radarBleScreen = 'radarBleScreen';
   static const String addManuallyDeviceScreen = 'addManuallyDeviceScreen';
+  static const String addYouDeviceScreen = 'addYouDeviceScreen';
   // static const String recoverPassScr = 'recoverPassword';
 
   BluetoothAdapterState _adapterState = BluetoothAdapterState.unknown; // Default state
@@ -84,7 +85,7 @@ class _MyAppState extends State<MyApp> {
         debugShowCheckedModeBanner: false,
         // themeMode: ThemeMode.system,
         theme: ThemeData(
-          primarySwatch: MyColors.pink,
+          primarySwatch: Colors.pink,
           visualDensity: VisualDensity.adaptivePlatformDensity,
         ),
         title: 'Gas Track',
@@ -96,8 +97,9 @@ class _MyAppState extends State<MyApp> {
           homescreen: (BuildContext context) => const Homescreen(),
           firmwareUpdateScreen: (BuildContext context) => const FirmwareUpdateScreen(),
           addManuallyDeviceScreen: (BuildContext context) => const AddManuallyDeviceScreen(),
+          addYouDeviceScreen: (BuildContext context) => const AddYouDeviceScreen(),
         },
-        initialRoute: splashScr,
+        initialRoute: addYouDeviceScreen,
         navigatorKey: navigatorKey,
         // home: const MyHomePage(title: 'Gas Track'),
         home: screen,
@@ -106,23 +108,7 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-class MyColors {
-  static const MaterialColor pink = MaterialColor(
-    0xFFFF4CBB,
-    <int, Color>{
-      50: Color(0xFFFF4CBB),
-      100: Color(0xFFFF4CBB),
-      200: Color(0xFFFF4CBB),
-      300: Color(0xFFFF4CBB),
-      400: Color(0xFFFF4CBB),
-      500: Color(0xFFFF4CBB),
-      600: Color(0xFFFF4CBB),
-      700: Color(0xFFFF4CBB),
-      800: Color(0xFFFF4CBB),
-      900: Color(0xFFFF4CBB),
-    },
-  );
-}
+
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});

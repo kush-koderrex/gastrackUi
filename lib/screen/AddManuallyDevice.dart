@@ -1,13 +1,63 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gas_track_ui/screen/FillOtherInformation.dart';
 import 'package:gas_track_ui/utils/extra.dart';
 import 'package:gas_track_ui/utils/snackbar.dart';
 import 'package:gas_track_ui/utils/utils.dart';
+import 'package:intl/intl.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'dart:developer' as developer;
+
+import 'package:permission_handler/permission_handler.dart';
+
+class DeviceResponse {
+  String deviceId;
+  String reqCode;
+  String dataLength;
+  String beforeDecimal;
+  String afterDecimal;
+  String battery;
+  bool buzzer;
+  bool critical;
+  String checksum;
+
+  DeviceResponse({
+    required this.deviceId,
+    required this.reqCode,
+    required this.dataLength,
+    required this.beforeDecimal,
+    required this.afterDecimal,
+    required this.battery,
+    required this.buzzer,
+    required this.critical,
+    required this.checksum,
+  });
+
+  @override
+  String toString() {
+    return 'DEVICE ID: $deviceId\n'
+        'REQ_CODE: $reqCode\n'
+        'DATA LENGTH: $dataLength\n'
+        'WEIGHT: $beforeDecimal.$afterDecimal kg\n'
+        'BATTERY: $battery%\n'
+        'BUZZER: ${buzzer ? "off" : "on"}\n'
+        'CRITICAL: ${critical ? "off" : "on"}\n'
+        'CHECKSUM: $checksum\n';
+  }
+}
+
+Future<void> requestPermissions() async {
+  await [
+    Permission.bluetooth,
+    Permission.bluetoothScan,
+    Permission.location,
+    Permission.storage, // Add storage permission
+  ].request();
+}
 
 class AddManuallyDeviceScreen extends StatefulWidget {
   const AddManuallyDeviceScreen({super.key});
@@ -22,13 +72,154 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
   late AnimationController _controller;
   late Animation<double> _animation;
   List<ScanResult> _scanResults = [];
+  late BluetoothCharacteristic characteristic;
+  // String serviceUUID = "9999";
+  // String writeCharacteristicUUID = "9191";
+  // String readCharacteristicUUID = "8888";
+  //
+  // late BluetoothCharacteristic Writecharacteristic;
+  String formattedDate = '';
+
+  bool isLoading = false;
+  bool isLoadingIndicater = false;
+
   List<BluetoothDevice> _systemDevices = [];
+  List<BluetoothService> _services = [];
+  List<BluetoothCharacteristic> _characteristic = [];
+  // _services = [];
   // List<Item> items = []; // Changed to List<Item>
   bool _isBluetoothEnabled = false; // Bluetooth state variable
+  bool _isDiscoveringServices = false;
+  List<int> _value = [];
+  late StreamSubscription<List<int>> _lastValueSubscription;
+
+  static const platform =
+  MethodChannel('com.gastrack.background/gtrack_process');
+  String _statusMessage = '';
+  String _logContent = '';
+  DeviceResponse? _deviceResponse;
+
+  final double emptyWeight = 14.8; // Empty weight of the cylinder
+  final double fullWeight = 29.0; // Full weight of the cylinder
+  // double gasPercentage = 0.0; // Percentage of gas remaining
+
+  // Function to calculate gas percentage based on current weight
+  double calculateGasPercentage(double currentWeight) {
+    if (currentWeight < emptyWeight) {
+      return 0.0; // Prevent negative percentages if weight is below empty
+    }
+    return ((currentWeight - emptyWeight) / (fullWeight - emptyWeight)) * 100;
+  }
+
+  Future onWritePressedgenreq(BluetoothCharacteristic characteristic) async {
+    try {
+      await characteristic.write(
+          [0x40, 0xA8, 0x00, 0x01, 0x01, 0x01, 0xAA, 0x55],
+          withoutResponse: characteristic.properties.writeWithoutResponse,
+          allowLongWrite: true);
+      // await c.write([0xa, 0x1, 0x2, 0x3c, 0x1, 0x37, 0xaa, 0x37], withoutResponse: c.properties.writeWithoutResponse);
+      Snackbar.show(ABC.c, "Write: Success", success: true);
+      print("General Request Send :-${characteristic}");
+      if (characteristic.properties.read) {
+        await characteristic.read();
+      }
+    } catch (e) {
+      Snackbar.show(ABC.c, prettyException("Write Error:", e), success: false);
+    }
+  }
+
+  // Future onSubscribePressed(BluetoothCharacteristic characteristic) async {
+  //   try {
+  //     String op =
+  //     characteristic.isNotifying == false ? "Subscribe" : "Unubscribe";
+  //     await characteristic.setNotifyValue(characteristic.isNotifying == false);
+  //     Snackbar.show(ABC.c, "$op : Success", success: true);
+  //     print("Subscribed Service${characteristic}");
+  //     if (characteristic.properties.read) {
+  //       await characteristic.read();
+  //     }
+  //     if (mounted) {
+  //       // setState(() {});
+  //     }
+  //   } catch (e) {
+  //     Snackbar.show(ABC.c, prettyException("Subscribe Error:", e),
+  //         success: false);
+  //   }
+  // }
+
+
+  Future onSubscribePressed(BluetoothCharacteristic characteristic) async {
+    try {
+      String op = characteristic.isNotifying == false ? "Subscribe" : "Unubscribe";
+      print("setNotifyValueop");
+      print(op);
+      print(characteristic.isNotifying == false);
+
+      await characteristic.setNotifyValue(characteristic.isNotifying == false);
+      Snackbar.show(ABC.c, "$op : Success", success: true);
+      developer.log("Subscribed Service:-${characteristic}");
+      if (characteristic.properties.read) {
+        print("Descriter:-${characteristic.descriptors.first}");
+        // await characteristic.read();
+        if (characteristic.properties.read) {
+          await characteristic.read();
+        } else {
+          developer.log("This characteristic does not support READ.");
+        }
+      }
+      if (characteristic.properties.notify) {
+        await characteristic.setNotifyValue(true);  // Enable notifications
+      } else {
+        developer.log("This characteristic does not support NOTIFY.");
+      }
+      if (mounted) {
+        // setState(() {});
+      }
+    } catch (e) {
+      Snackbar.show(ABC.c, prettyException("Subscribe Error:", e),
+          success: false);
+    }
+  }
+
+  Future<void> subscribeToCharacteristic(BluetoothCharacteristic characteristic) async {
+    try {
+      if (characteristic.properties.notify) {
+        await characteristic.setNotifyValue(true);  // Enable notifications
+
+
+        // characteristic.lastValueStream.listen((value) {
+        //   // Process the incoming notification data here
+        //   developer.log("Notification received: $value");
+        //
+        // });
+        //
+        // developer.log("Subscribed to notifications for characteristic ${characteristic.uuid}");
+      } else {
+        developer.log("ERROR: This characteristic does not support NOTIFY.");
+      }
+    } catch (e) {
+      developer.log("Failed to subscribe to characteristic: $e", error: e);
+      await Future.delayed(Duration(seconds: 1));
+      await characteristic.setNotifyValue(true);
+    }
+  }
+
+
+  Future onReadPressed(BluetoothCharacteristic characteristic) async {
+    try {
+      await characteristic.read();
+      Snackbar.show(ABC.c, "Read: Success", success: true);
+      print("Start Reading");
+    } catch (e) {
+      Snackbar.show(ABC.c, prettyException("Read Error:", e), success: false);
+      print("Read Error ${e}");
+    }
+  }
 
   // Method to check Bluetooth state
   Future<void> checkBluetoothState() async {
-    BluetoothAdapterState state = await FlutterBluePlus.adapterState.first; // Get the current Bluetooth state
+    BluetoothAdapterState state = await FlutterBluePlus
+        .adapterState.first; // Get the current Bluetooth state
 
     if (state == BluetoothAdapterState.on) {
       setState(() {
@@ -53,7 +244,65 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
       // If an error occurred during connection, print "Not connected"
       print("Not connected");
       Fluttertoast.showToast(msg: "Device Not connected");
-      Snackbar.show(ABC.c, prettyException("Connect Error:", e), success: false);
+      Snackbar.show(ABC.c, prettyException("Connect Error:", e),
+          success: false);
+    });
+  }
+
+  Future onConnectPressedee(BluetoothDevice device) async {
+    try {
+      await device.connectAndUpdateStream();
+      Snackbar.show(ABC.c, "Connect: Success", success: true);
+    } catch (e) {
+      if (e is FlutterBluePlusException &&
+          e.code == FbpErrorCode.connectionCanceled.index) {
+        // ignore connections canceled by the user
+      } else {
+        Snackbar.show(ABC.c, prettyException("Connect Error:", e),
+            success: false);
+      }
+    }
+  }
+
+  Future onDiscoverServicesPressed(BluetoothDevice device) async {
+    if (mounted) {
+      // setState(() {
+      //   _isDiscoveringServices = true;
+      // });
+    }
+    try {
+      _services = await device.discoverServices();
+
+      print("_servicestest");
+      // print(_services);
+      Snackbar.show(ABC.c, "Discover Services: Success", success: true);
+    } catch (e) {
+      Snackbar.show(ABC.c, prettyException("Discover Services Error:", e),
+          success: false);
+      print("Discover Services Error:$e");
+    }
+    if (mounted) {
+      // setState(() {
+      //   _isDiscoveringServices = false;
+      // });
+    }
+  }
+
+  Future<void> _launchTask(String deviceName) async {
+    print("Task Launched Succes");
+    String result;
+    await requestPermissions();
+    try {
+      final value = deviceName;
+      final duration = 1;
+      result = await platform.invokeMethod(
+          'launchPeriodicTask', {'device': value, 'duration': duration});
+    } on PlatformException catch (e) {
+      result = "Failed to launch task: '${e.message}'.";
+    }
+
+    setState(() {
+      _statusMessage = result;
     });
   }
 
@@ -89,14 +338,17 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
   @override
   void initState() {
     super.initState();
+    DateTime now = DateTime.now();
+    formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
     checkBluetoothState();
     onScanPressed();
-
 
     _scanResultsSubscription = FlutterBluePlus.scanResults.listen((results) {
       // Filter results based on platformName being "BLE Device"
       _scanResults = results.where((result) {
-        return result.device.platformName == "BLE Device"; // Case-sensitive match
+        return result.device.platformName ==
+            // "Project_RED_TTTP"; // Case-sensitive match
+            "BLE Device"; // Case-sensitive match
       }).toList();
 
       // if (mounted) {
@@ -132,6 +384,12 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
   void dispose() {
     _scanResultsSubscription.cancel();
     _controller.dispose();
+    _lastValueSubscription.cancel();
+
+    isConnected =false;
+    isSubscribe =false;
+    isGetData =false;
+    count =0;
     super.dispose();
   }
 
@@ -145,15 +403,17 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
     try {
       _systemDevices = await FlutterBluePlus.systemDevices;
     } catch (e) {
-      Snackbar.show(ABC.b, prettyException("System Devices Error:", e), success: false);
+      Snackbar.show(ABC.b, prettyException("System Devices Error:", e),
+          success: false);
     }
     try {
-      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
+      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
     } catch (e) {
-      Snackbar.show(ABC.b, prettyException("Start Scan Error:", e), success: false);
+      Snackbar.show(ABC.b, prettyException("Start Scan Error:", e),
+          success: false);
     }
     if (mounted) {
-      setState(() {});
+      // setState(() {});
     }
   }
 
@@ -163,11 +423,199 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
       Snackbar.show(ABC.c, "Connected to ${device.remoteId}", success: true);
     }).catchError((e) {
       // Connection failed, retry after delay
-      Snackbar.show(ABC.c, "Connect Error: ${prettyException("Error:", e)}", success: false);
+      Snackbar.show(ABC.c, "Connect Error: ${prettyException("Error:", e)}",
+          success: false);
       Future.delayed(Duration(seconds: 5), () {
         connectDevice(device); // Retry connection
       });
     });
+  }
+
+  DeviceResponse? parseDeviceResponse(String response) {
+    // Ensure the response is in uppercase
+    response = response.toUpperCase();
+
+    // Expected response length is 24 hex digits
+    if (response.length != 24) {
+      // print('Invalid response length: ${response.length}');
+      return null;
+    }
+
+    try {
+      // Parsing the response
+      String deviceId = response.substring(0, 6); // 3 bytes -> 6 hex digits
+      String reqCode = response.substring(6, 8); // 1 byte -> 2 hex digits
+      String dataLength = response.substring(8, 10); // 1 byte -> 2 hex digits
+
+      String beforeDecimal = response.substring(10, 12);
+      String afterDecimal = response.substring(12, 14);
+      String battery = response.substring(14, 16);
+      bool buzzer = response.substring(16, 18) == '00';
+      bool critical = response.substring(18, 20) == '00';
+      String checksum = response.substring(20, 24); // 2 bytes -> 4 hex digits
+
+      return DeviceResponse(
+        deviceId: deviceId,
+        reqCode: reqCode,
+        dataLength: dataLength,
+        beforeDecimal: beforeDecimal,
+        afterDecimal: afterDecimal,
+        battery: battery,
+        buzzer: buzzer,
+        critical: critical,
+        checksum: checksum,
+      );
+    } catch (e) {
+      print('Error parsing response: $e');
+      return null;
+    }
+  }
+
+  bool isConnected =false;
+  bool isSubscribe =false;
+  bool isGetData =false;
+  var count  =0;
+  bool isCount = false;
+
+
+  Future GetData()async
+  {
+    isLoading = true;
+    print("Searched Device");
+    Utils.device =_scanResults[0].device;
+    developer.log("Scan Results:-${_scanResults[0].toString()}");
+    developer.log("Scan Results:-${_scanResults[0].runtimeType.toString()}");
+    developer.log("Scan Results array:-${_scanResults.toString()}");
+    developer.log("Scan length:-${_scanResults.length.toString()}");
+    print(_scanResults[0]);
+    print(_scanResults[0].device.toString());
+    print(_scanResults[0].device.connect());
+    print(_scanResults[0].device.connectAndUpdateStream());
+    _scanResults[0].device.connectAndUpdateStream().catchError((e) {
+      Snackbar.show(
+          ABC.c,
+          prettyException(
+              "Connect Error:",
+              e),
+          success: false);
+    });
+    print("isConnected:- ${_scanResults[0].device.isConnected}");
+    // print(_scanResults[0].device.isConnected);
+    if (_scanResults[0].device.isConnected == true) {
+
+      // print(_scanResults[0].device.discoverServices());
+      _services = await _scanResults[0].device.discoverServices();
+      print("_servicestest");
+      developer.log(_services.toString());
+
+      for (var service in _services) {
+        // Loop through each characteristic in the service
+        for (var characteristic in service.characteristics) {
+          // Check if the characteristic UUID matches the writeCharacteristicUUID
+          if (characteristic.uuid.toString() == Utils.writeCharacteristicUUID) {
+            Utils.Writecharacteristic = characteristic;
+          }
+          // Check if the characteristic UUID matches the readCharacteristicUUID
+          else if (characteristic.uuid.toString() == Utils.readCharacteristicUUID) {
+            Utils.Readcharacteristic = characteristic;
+          }
+        }
+      }
+
+      // developer.log("Readcharacteristic:-${Readcharacteristic.toString()}");
+      developer.log("Readcharacteristic:-${Utils.Readcharacteristic.characteristicUuid.toString()}");
+
+      // developer.log("Writecharacteristic:-${Writecharacteristic.toString()}");
+      developer.log("Writecharacteristic:-${Utils.Writecharacteristic.characteristicUuid.toString()}");
+
+      for (var service in _services) {
+        // Loop through each characteristic in the service
+        for (var characteristic in service.characteristics) {
+          // Add each characteristic to the _characteristic list
+          _characteristic.add(characteristic);
+        }
+      }
+      // print("_characteristic-------------------------->");
+      developer.log("_characteristic--->" + _characteristic.toString());
+      print("_characteristic length ->${_characteristic.length}");
+
+      onSubscribePressed(Utils.Readcharacteristic);
+      subscribeToCharacteristic(Utils.Readcharacteristic);
+
+
+      print("Remote:-${Utils.Writecharacteristic.remoteId}");
+      print("serviceUuid:-${Utils.Writecharacteristic.serviceUuid}");
+      print("characteristicUuid:-${Utils.Writecharacteristic.characteristicUuid}");
+      print("secondaryServiceUuid:-${Utils.Writecharacteristic.secondaryServiceUuid}");
+
+      // onSubscribePressed(Utils.Readcharacteristic);
+      // print("Read---->Read---->");
+      print("Read From:-${Utils.Readcharacteristic.characteristicUuid}");
+      print("Is Subscribed:-${Utils.Readcharacteristic.isNotifying}");
+
+      if (Utils.Readcharacteristic.isNotifying ==
+          true) {
+        onWritePressedgenreq(Utils.Writecharacteristic);
+        // print(_characteristic[_characteristic.length-2].characteristicUuid);
+        onReadPressed(Utils.Readcharacteristic);
+        _lastValueSubscription = Utils.Readcharacteristic.lastValueStream.listen((value) {
+          _value = value;});
+
+        String data = _value.toString();
+        // print("Data:-${data}");
+        print("RecData:-${data}");
+
+
+        if(_value.isNotEmpty){
+          List<String> hexList = _value
+              .map((decimal) => decimal.toRadixString(16).padLeft(2, '0'))
+              .toList();
+          String hexString = hexList.join('');
+          print("When Data is not null:-${data}");
+          print("hexString:-${hexString}");
+
+          _deviceResponse = parseDeviceResponse(hexString);
+
+          // print(_deviceResponse?.battery.toString());
+          // setState(() {
+          Utils.battery = "${_deviceResponse?.battery.toString()}";
+          Utils.weight = "${_deviceResponse?.beforeDecimal}.${_deviceResponse?.afterDecimal}";
+          Utils.remainGas = calculateGasPercentage(double.parse(Utils.weight)).toStringAsFixed(0);
+          // });
+          print("battery:-${_deviceResponse?.battery.toString()}");
+          print("weight:-${_deviceResponse?.beforeDecimal}.${_deviceResponse?.afterDecimal}");
+
+          Fluttertoast.showToast(
+            msg: 'Device Connect successfully!',
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.BOTTOM,
+            backgroundColor: Colors.black,
+            textColor: Colors.white,
+            fontSize: 16.0,
+          );
+          Future.delayed(
+              Duration(
+                  seconds: 1),
+                  () {
+                _lastValueSubscription.cancel();
+                showCustomDialog(context);
+              });
+          isLoading = false;
+
+          isGetData=true;
+        }
+        isSubscribe = true;
+      }
+      isConnected =true;
+    }
+
+    // onConnectPressed(_scanResults[0].device);
+    // onConnectPressedee(_scanResults[0].device);
+    // onDiscoverServicesPressed(_scanResults[0].device);
+
+    // _launchTask(_scanResults[0].device.toString());
+
+    // showCustomDialog(context);
   }
 
 
@@ -184,6 +632,7 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
   //     Snackbar.show(ABC.c, prettyException("Connect Error:", e), success: false);
   //   });
   // }
+
 
   @override
   Widget build(BuildContext context) {
@@ -229,10 +678,8 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
               ),
             ),
           ),
-
           Padding(
-            padding:
-            EdgeInsets.only(top: height / 9.5), // Adjust for gradient
+            padding: EdgeInsets.only(top: height / 9.5), // Adjust for gradient
             child: Container(
               height: height,
               width: width,
@@ -270,23 +717,36 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                                   children: [
                                     Center(
                                       child: AnimatedBuilder(
+
                                         animation: _animation,
                                         builder: (context, child) {
                                           return Stack(
                                             alignment: Alignment.center,
                                             children: [
-                                              buildRadarCircle(250 * _animation.value,
-                                                  Colors.purple.withOpacity(0.1)),
-                                              buildRadarCircle(200 * _animation.value,
-                                                  Colors.purple.withOpacity(0.2)),
-                                              buildRadarCircle(150 * _animation.value,
-                                                  Colors.purple.withOpacity(0.3)),
-                                              buildRadarCircle(100 * _animation.value,
-                                                  Colors.purple.withOpacity(0.4)),
-                                              buildRadarCircle(50 * _animation.value,
-                                                  Colors.purple.withOpacity(0.5)),
-                                              buildRadarCircle(25 * _animation.value,
-                                                  Colors.purple.withOpacity(0.6)),
+                                              buildRadarCircle(
+                                                  250 * _animation.value,
+                                                  Colors.purple
+                                                      .withOpacity(0.1)),
+                                              buildRadarCircle(
+                                                  200 * _animation.value,
+                                                  Colors.purple
+                                                      .withOpacity(0.2)),
+                                              buildRadarCircle(
+                                                  150 * _animation.value,
+                                                  Colors.purple
+                                                      .withOpacity(0.3)),
+                                              buildRadarCircle(
+                                                  100 * _animation.value,
+                                                  Colors.purple
+                                                      .withOpacity(0.4)),
+                                              buildRadarCircle(
+                                                  50 * _animation.value,
+                                                  Colors.purple
+                                                      .withOpacity(0.5)),
+                                              buildRadarCircle(
+                                                  25 * _animation.value,
+                                                  Colors.purple
+                                                      .withOpacity(0.6)),
                                             ],
                                           );
                                         },
@@ -295,60 +755,82 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                                     // If items are available, show their avatars
 
                                     FutureBuilder(
-                                      future: Future.delayed(Duration(seconds: 3)),
-                                      builder: (BuildContext context, AsyncSnapshot snapshot) {
+                                      future:
+                                      Future.delayed(Duration(seconds: 3)),
+                                      builder: (BuildContext context,
+                                          AsyncSnapshot snapshot) {
                                         // Check the connection state of the Future
-                                        if (snapshot.connectionState == ConnectionState.waiting) {
+                                        if (snapshot.connectionState ==
+                                            ConnectionState.waiting) {
                                           // Optionally, show a loading indicator while waiting
-                                          return Center(child: CircularProgressIndicator());
+                                          return Container();
+                                            // Center(
+                                          //     child:
+                                          //     CircularProgressIndicator());
                                         } else {
-                                          return Stack( // Use a Stack to allow Positioned widgets
+                                          return Stack(
+                                            // Use a Stack to allow Positioned widgets
                                             children: [
                                               if (_scanResults.isNotEmpty)
                                                 Positioned(
                                                   left: centerX + 80,
                                                   bottom: centerY,
                                                   child: InkWell(
-
                                                     onTap: () async {
-                                                      try {
-                                                        await _scanResults[0].device.connect();
-                                                        await _scanResults[0].device.createBond(); // If this completes without exception, assume success
-                                                        Fluttertoast.showToast(
-                                                          msg: 'Device bonded successfully!',
-                                                          toastLength: Toast.LENGTH_LONG,
-                                                          gravity: ToastGravity.BOTTOM,
-                                                          backgroundColor: Colors.green,
-                                                          textColor: Colors.white,
-                                                          fontSize: 16.0,
-                                                        );
-                                                        Future.delayed(
-                                                            Duration(
-                                                                seconds: 2),
-                                                                () {
-                                                                  showCustomDialog(context);
-                                                            });
+                                                        var count =0;
+                                                        while(!isConnected || !isSubscribe || !isGetData){
+                                                          print("isConnected:-${isConnected}");
+                                                          print("isSubscribe:-${isSubscribe}");
+                                                          print("isGetData:-${isGetData}");
+
+                                                          await Future.delayed(
+                                                              Duration(
+                                                                  seconds:
+                                                                  5));
+
+                                                          GetData();
+                                                          count++;
+                                                          print("while Count:-${count}");
+                                                          print("while isConnected :-${isConnected}");
+                                                          print("while isSubscribe:-${isSubscribe}");
+                                                        }
 
 
-                                                      } catch (e) {
-                                                        Fluttertoast.showToast(
-                                                          msg: 'Failed to bond the device: ${e.toString()}',
-                                                          toastLength: Toast.LENGTH_SHORT,
-                                                          gravity: ToastGravity.BOTTOM,
-                                                          backgroundColor: Colors.red,
-                                                          textColor: Colors.white,
-                                                          fontSize: 16.0,
-                                                        );
-                                                      }
-                                                      // showCustomDialog(context);
+                                                      // GetData();
+                                                      // if (count<5){
+                                                      //   while(!isConnected || !isSubscribe || !isGetData  ){
+                                                      //     print("isConnected:-${isConnected}");
+                                                      //     print("isSubscribe:-${isSubscribe}");
+                                                      //     print("isGetData:-${isGetData}");
+                                                      //     await Future.delayed(
+                                                      //         Duration(
+                                                      //             seconds:
+                                                      //             1));
+                                                      //
+                                                      //     GetData();
+                                                      //     print("Count:-${count}");
+                                                      //     count++;
+                                                      //
+                                                      //
+                                                      //   }
+                                                      // }else{
+                                                      //   Fluttertoast.showToast(
+                                                      //     msg:
+                                                      //     'Something Went Wrong',
+                                                      //     toastLength:
+                                                      //     Toast.LENGTH_LONG,
+                                                      //     gravity: ToastGravity
+                                                      //         .BOTTOM,
+                                                      //     backgroundColor:
+                                                      //     Colors.green,
+                                                      //     textColor:
+                                                      //     Colors.white,
+                                                      //     fontSize: 16.0,
+                                                      //   );
+                                                      // }
+
                                                     },
-                                                    // onTap: () {
-                                                    //
-                                                    //   print(_scanResults[0].device);
-                                                    //   // connectDevice(_scanResults[0].device);
-                                                    //   // showCustomDialog(context);
-                                                    //   onConnectPressed(_scanResults[0].device);
-                                                    // },
+
                                                     child: Column(
                                                       children: [
                                                         CircleAvatar(
@@ -356,17 +838,23 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                                                             "assets/images/ListIcons/autobooking.png",
                                                             width: 10,
                                                             color: Colors.white,
-                                                            fit: BoxFit.fitWidth,
+                                                            fit:
+                                                            BoxFit.fitWidth,
                                                           ),
-                                                          backgroundColor: Color(0xF2A4386B),
+                                                          backgroundColor:
+                                                          Color(0xF2A4386B),
                                                           radius: 20,
                                                         ),
                                                         Text(
-                                                          _scanResults[0].device.platformName, // Accessing item name
+                                                          _scanResults[0]
+                                                              .device
+                                                              .platformName, // Accessing item name
                                                           style: TextStyle(
-                                                            fontFamily: 'Cerapro',
+                                                            fontFamily:
+                                                            'Cerapro',
                                                             fontSize: 11,
-                                                            fontWeight: FontWeight.w400,
+                                                            fontWeight:
+                                                            FontWeight.w400,
                                                             color: Colors.black,
                                                           ),
                                                         ),
@@ -381,23 +869,37 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                                                   child: InkWell(
                                                     onTap: () async {
                                                       try {
-                                                        await _scanResults[1].device.connect();
-                                                        await _scanResults[1].device.createBond(); // If this completes without exception, assume success
+                                                        await _scanResults[1]
+                                                            .device
+                                                            .connect();
+                                                        await _scanResults[1]
+                                                            .device
+                                                            .createBond(); // If this completes without exception, assume success
                                                         Fluttertoast.showToast(
-                                                          msg: 'Device bonded successfully!',
-                                                          toastLength: Toast.LENGTH_LONG,
-                                                          gravity: ToastGravity.BOTTOM,
-                                                          backgroundColor: Colors.green,
-                                                          textColor: Colors.white,
+                                                          msg:
+                                                          'Device bonded successfully!',
+                                                          toastLength:
+                                                          Toast.LENGTH_LONG,
+                                                          gravity: ToastGravity
+                                                              .BOTTOM,
+                                                          backgroundColor:
+                                                          Colors.green,
+                                                          textColor:
+                                                          Colors.white,
                                                           fontSize: 16.0,
                                                         );
                                                       } catch (e) {
                                                         Fluttertoast.showToast(
-                                                          msg: 'Failed to bond the device: ${e.toString()}',
-                                                          toastLength: Toast.LENGTH_SHORT,
-                                                          gravity: ToastGravity.BOTTOM,
-                                                          backgroundColor: Colors.red,
-                                                          textColor: Colors.white,
+                                                          msg:
+                                                          'Failed to bond the device: ${e.toString()}',
+                                                          toastLength: Toast
+                                                              .LENGTH_SHORT,
+                                                          gravity: ToastGravity
+                                                              .BOTTOM,
+                                                          backgroundColor:
+                                                          Colors.red,
+                                                          textColor:
+                                                          Colors.white,
                                                           fontSize: 16.0,
                                                         );
                                                       }
@@ -410,17 +912,23 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                                                             "assets/images/ListIcons/autobooking.png",
                                                             width: 10,
                                                             color: Colors.white,
-                                                            fit: BoxFit.fitWidth,
+                                                            fit:
+                                                            BoxFit.fitWidth,
                                                           ),
-                                                          backgroundColor: Color(0xF2A4386B),
+                                                          backgroundColor:
+                                                          Color(0xF2A4386B),
                                                           radius: 20,
                                                         ),
                                                         Text(
-                                                          _scanResults[1].device.platformName, // Accessing item name
+                                                          _scanResults[1]
+                                                              .device
+                                                              .platformName, // Accessing item name
                                                           style: TextStyle(
-                                                            fontFamily: 'Cerapro',
+                                                            fontFamily:
+                                                            'Cerapro',
                                                             fontSize: 11,
-                                                            fontWeight: FontWeight.w400,
+                                                            fontWeight:
+                                                            FontWeight.w400,
                                                             color: Colors.black,
                                                           ),
                                                         ),
@@ -443,17 +951,23 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                                                             "assets/images/ListIcons/autobooking.png",
                                                             width: 10,
                                                             color: Colors.white,
-                                                            fit: BoxFit.fitWidth,
+                                                            fit:
+                                                            BoxFit.fitWidth,
                                                           ),
-                                                          backgroundColor: Color(0xF2A4386B),
+                                                          backgroundColor:
+                                                          Color(0xF2A4386B),
                                                           radius: 20,
                                                         ),
                                                         Text(
-                                                          _scanResults[2].device.platformName, // Accessing item name
+                                                          _scanResults[2]
+                                                              .device
+                                                              .platformName, // Accessing item name
                                                           style: TextStyle(
-                                                            fontFamily: 'Cerapro',
+                                                            fontFamily:
+                                                            'Cerapro',
                                                             fontSize: 11,
-                                                            fontWeight: FontWeight.w400,
+                                                            fontWeight:
+                                                            FontWeight.w400,
                                                             color: Colors.black,
                                                           ),
                                                         ),
@@ -466,19 +980,15 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                                         }
                                       },
                                     ),
-
-
-
-
-
-
                                   ],
                                 ),
                               ),
                               FutureBuilder(
                                 future: Future.delayed(Duration(seconds: 3)),
-                                builder: (BuildContext context, AsyncSnapshot snapshot) {
-                                  if (snapshot.connectionState == ConnectionState.waiting) {
+                                builder: (BuildContext context,
+                                    AsyncSnapshot snapshot) {
+                                  if (snapshot.connectionState ==
+                                      ConnectionState.waiting) {
                                     return Center(
                                       child: Text(
                                         "Scanning for nearby devices. Please ensure your Bluetooth is turned on and you are close to the device",
@@ -490,19 +1000,26 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                                       ),
                                     );
                                   }
-                                  return
-                                    Container(
-                                      child: Center(
-                                        child: Text(
-                                          "Device found. Please tap to add the device",
-                                          textAlign: TextAlign.center,
-                                          style: AppStyles.customTextStyle(
-                                            fontSize: 14.0,
-                                            fontWeight: FontWeight.w400,
-                                          ), // Style for the text
-                                        ),
+                                  return  isLoading
+                                      ? Center(
+                                    child: LoadingAnimationWidget
+                                        .staggeredDotsWave(
+                                      size: 80,
+                                      color:
+                                      AppStyles.cutstomIconColor,
+                                    ),
+                                  ):Container(
+                                    child: Center(
+                                      child: Text(
+                                        "Device found. Please tap to add the device",
+                                        textAlign: TextAlign.center,
+                                        style: AppStyles.customTextStyle(
+                                          fontSize: 14.0,
+                                          fontWeight: FontWeight.w400,
+                                        ), // Style for the text
                                       ),
-                                    );
+                                    ),
+                                  );
                                   //   ElevatedButton(
                                   //   style: ElevatedButton.styleFrom(
                                   //     backgroundColor: const Color(0xFFFA7365),
@@ -542,101 +1059,101 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
     );
   }
 
-void showCustomDialog(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Container(
-          padding: EdgeInsets.all(20),
-          height: 350,
-          decoration: BoxDecoration(
+  void showCustomDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              InkWell(
-                onTap: () {
-                  Navigator.of(context).pop();
-                },
-                child: Container(
-                  width: double.infinity,
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: Icon(
-                      Icons.cancel,
-                      size: 35,
-                      color: AppStyles.cutstomIconColor,
-                    ),
-                  ),
-                ),
-              ),
-              Image.asset(
-                "assets/images/AddyourdeviceScreen/poupimage.png",
-                fit: BoxFit.fitWidth,
-                width: 100,
-                height: 100,
-              ),
-              SizedBox(height: 20),
-              // Name
-              Center(
-                child: Text(
-                  'Device Selected',
-                  style: AppStyles.customTextStyle(
-                      fontSize: 24.0, fontWeight: FontWeight.w700),
-                ),
-              ),
-              Center(
-                child: Text(
-                  'Successfully',
-                  style: AppStyles.customTextStyle(
-                      fontSize: 24.0, fontWeight: FontWeight.w700),
-                ),
-              ),
-              SizedBox(height: 20),
-              // Done Button
-              SizedBox(
-                width: 250,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    // Navigator.of(context).pop();
-                    // await Future.delayed(Duration(seconds: 3));
-                    Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) =>
-                                const FullOtherInformation()));
+          child: Container(
+            padding: EdgeInsets.all(20),
+            height: 350,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                InkWell(
+                  onTap: () {
+                    Navigator.of(context).pop();
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        AppStyles.cutstomIconColor, // Button background color
-                    foregroundColor: Colors.white, // Button text color
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12), // Curved edges
+                  child: Container(
+                    width: double.infinity,
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Icon(
+                        Icons.cancel,
+                        size: 35,
+                        color: AppStyles.cutstomIconColor,
+                      ),
                     ),
-                    minimumSize: const Size(200, 50),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 30, vertical: 15), // Adjust button size
-                    elevation: 5, // Elevation (shadow)
-                  ),
-                  child: Text(
-                    'Done',
-                    style: AppStyles.customTextStyle(
-                        fontSize: 15.0, fontWeight: FontWeight.w500),
                   ),
                 ),
-              ),
-            ],
+                Image.asset(
+                  "assets/images/AddyourdeviceScreen/poupimage.png",
+                  fit: BoxFit.fitWidth,
+                  width: 100,
+                  height: 100,
+                ),
+                SizedBox(height: 20),
+                // Name
+                Center(
+                  child: Text(
+                    'Device Selected',
+                    style: AppStyles.customTextStyle(
+                        fontSize: 24.0, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                Center(
+                  child: Text(
+                    'Successfully',
+                    style: AppStyles.customTextStyle(
+                        fontSize: 24.0, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                SizedBox(height: 20),
+                // Done Button
+                SizedBox(
+                  width: 250,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      // Navigator.of(context).pop();
+                      // await Future.delayed(Duration(seconds: 3));
+                      Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) =>
+                              const FullOtherInformation()));
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                      AppStyles.cutstomIconColor, // Button background color
+                      foregroundColor: Colors.white, // Button text color
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12), // Curved edges
+                      ),
+                      minimumSize: const Size(200, 50),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 30, vertical: 15), // Adjust button size
+                      elevation: 5, // Elevation (shadow)
+                    ),
+                    child: Text(
+                      'Done',
+                      style: AppStyles.customTextStyle(
+                          fontSize: 15.0, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
 }
 
 class Item {
@@ -645,970 +1162,3 @@ class Item {
 
   Item({required this.name, required this.distance});
 }
-
-
-
-
-
-
-
-
-// import 'dart:async';
-// import 'dart:math';
-// import 'package:flutter/material.dart';
-// import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-// import 'package:gas_track_ui/screen/FillOtherInformation.dart';
-// import 'package:gas_track_ui/utils/extra.dart';
-// import 'package:gas_track_ui/utils/snackbar.dart';
-// import 'package:gas_track_ui/utils/utils.dart';
-// import 'dart:developer' as developer;
-//
-// class AddManuallyDeviceScreen extends StatefulWidget {
-//   const AddManuallyDeviceScreen({super.key});
-//
-//   @override
-//   State<AddManuallyDeviceScreen> createState() =>
-//       _AddManuallyDeviceScreenState();
-// }
-//
-// class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
-//     with SingleTickerProviderStateMixin {
-//   Future<void> delay(int seconds) async {
-//     await Future.delayed(Duration(seconds: seconds));
-//   }
-//
-//   late AnimationController _controller;
-//   late Animation<double> _animation;
-//   List<ScanResult> _scanResults = [];
-//   List<BluetoothDevice> _systemDevices = [];
-//   List<dynamic> items = [];
-//
-//   // This function updates the items list with device information from scan results
-//   void updateItemsFromScanResults(List<ScanResult> scanResults) {
-//     // Clear the previous items
-//     items.clear();
-//
-//     // Populate the items list with the names and distances from the scan results
-//     for (var result in scanResults) {
-//       // Create a map for each device
-//       var deviceInfo = {
-//         'name': result.device.name, // Get the device name
-//         'distance':
-//             result.rssi.toDouble() // Use RSSI as an example for distance
-//       };
-//
-//       // Add the device info to the items list
-//       items.add(deviceInfo);
-//     }
-//   }
-//
-// // Example usage
-//   void onScanResultsUpdated(List<ScanResult> scanResults) {
-//     // Update the items list when scan results are updated
-//     updateItemsFromScanResults(scanResults);
-//
-//     // Optionally print the list for debugging
-//     printDeviceList();
-//   }
-//
-//   void printDeviceList() {
-//     for (var item in items) {
-//       print(
-//           'Device Name: ${item['name']}, Distance: ${item['distance']} meters');
-//     }
-//   }
-//
-//   late StreamSubscription<List<ScanResult>> _scanResultsSubscription;
-//
-//   @override
-//   void initState() {
-//     onScanPressed();
-//
-//     _scanResultsSubscription = FlutterBluePlus.scanResults.listen((results) {
-//       _scanResults = results;
-//       if (mounted) {
-//         setState(() {});
-//       }
-//     }, onError: (e) {
-//       Snackbar.show(ABC.b, prettyException("Scan Error:", e), success: false);
-//     });
-//
-//     super.initState();
-//     _controller = AnimationController(
-//       duration: const Duration(seconds: 2),
-//       vsync: this,
-//     )..repeat();
-//
-//     _animation = Tween<double>(begin: 1.0, end: 2.0).animate(_controller);
-//   }
-//
-//   @override
-//   void dispose() {
-//     _scanResultsSubscription.cancel();
-//     _controller.dispose();
-//     super.dispose();
-//   }
-//
-//   void onConnectPressed(BluetoothDevice device) {
-//     device.connectAndUpdateStream().catchError((e) {
-//       Snackbar.show(ABC.c, prettyException("Connect Error:", e),
-//           success: false);
-//     });
-//     // MaterialPageRoute route = MaterialPageRoute(
-//     //     builder: (context) => DeviceScreen(device: device), settings: const RouteSettings(name: '/DeviceScreen'));
-//     // Navigator.of(context).push(route);
-//   }
-//
-//   Future onScanPressed() async {
-//     try {
-//       _systemDevices = await FlutterBluePlus.systemDevices;
-//     } catch (e) {
-//       Snackbar.show(ABC.b, prettyException("System Devices Error:", e),
-//           success: false);
-//     }
-//     try {
-//       await FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
-//     } catch (e) {
-//       Snackbar.show(ABC.b, prettyException("Start Scan Error:", e),
-//           success: false);
-//     }
-//     if (mounted) {
-//       setState(() {});
-//     }
-//   }
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     print("_scanResults");
-//     developer.log("_scanResults ---->${_scanResults.toString()}");
-//     // developer.log("_systemDevices ---->${_systemDevices.toString()}");
-//     var height = MediaQuery.of(context).size.height;
-//     var width = MediaQuery.of(context).size.width;
-//
-//     // Container dimensions
-//     var containerHeight = height / 2;
-//     var containerWidth = width;
-//
-//     // Center of the container
-//     var centerX = containerWidth / 2;
-//     var centerY = containerHeight / 2;
-//
-//     // Log or print the center values
-//     print('Center of the container is at: ($centerX, $centerY)');
-//
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: const Text(
-//           "Adding Manually",
-//           style: AppStyles.appBarTextStyle,
-//         ),
-//         backgroundColor: Colors.transparent,
-//         elevation: 0,
-//         centerTitle: true,
-//         iconTheme: const IconThemeData(color: Colors.white),
-//       ),
-//       extendBodyBehindAppBar: true,
-//       body: Stack(
-//         children: [
-//           ClipPath(
-//             clipper: TopRoundedRectangleClipper(),
-//             child: Container(
-//               height: height * 0.30,
-//               decoration: const BoxDecoration(
-//                 gradient: LinearGradient(
-//                   colors: [Color(0xFFFA7365), Color(0xFF9A4DFF)],
-//                   begin: Alignment.topLeft,
-//                   end: Alignment.bottomRight,
-//                 ),
-//               ),
-//             ),
-//           ),
-//           Padding(
-//             padding: EdgeInsets.only(top: height / 9.5),
-//             child: Container(
-//               height: height,
-//               width: width,
-//               decoration: BoxDecoration(
-//                 color: Colors.white54.withOpacity(0.30),
-//                 borderRadius: BorderRadius.circular(45.0),
-//               ),
-//               child: Padding(
-//                 padding: const EdgeInsets.all(8.0),
-//                 child: Container(
-//                   decoration: BoxDecoration(
-//                     color: Colors.white,
-//                     borderRadius: BorderRadius.circular(45.0),
-//                   ),
-//                   child: Column(
-//                     mainAxisAlignment: MainAxisAlignment.center,
-//                     crossAxisAlignment: CrossAxisAlignment.center,
-//                     children: <Widget>[
-//                       Container(
-//                         // color: Colors.cyan,
-//                         height: height / 2,
-//
-//                         child: Stack(
-//                           children: [
-//                             Center(
-//                               child: AnimatedBuilder(
-//                                 animation: _animation,
-//                                 builder: (context, child) {
-//                                   return Stack(
-//                                     alignment: Alignment.center,
-//                                     children: [
-//                                       buildRadarCircle(250 * _animation.value,
-//                                           Colors.purple.withOpacity(0.1)),
-//                                       buildRadarCircle(200 * _animation.value,
-//                                           Colors.purple.withOpacity(0.2)),
-//                                       buildRadarCircle(150 * _animation.value,
-//                                           Colors.purple.withOpacity(0.3)),
-//                                       buildRadarCircle(100 * _animation.value,
-//                                           Colors.purple.withOpacity(0.4)),
-//                                       buildRadarCircle(50 * _animation.value,
-//                                           Colors.purple.withOpacity(0.5)),
-//                                       buildRadarCircle(25 * _animation.value,
-//                                           Colors.purple.withOpacity(0.6)),
-//
-//                                       // // Plot devices on the radar
-//                                       // ...items.map((item) => buildItemDot(item)).toList(),
-//                                     ],
-//                                   );
-//                                 },
-//                               ),
-//                             ),
-//                             // Positioned(
-//                             //     top: centerX,
-//                             //     child: Container(
-//                             //         child: Column(
-//                             //       children: [
-//                             //         CircleAvatar(
-//                             //           child: Image.asset(
-//                             //             "assets/images/ListIcons/autobooking.png",
-//                             //             width: 10,
-//                             //             color: Colors.white,
-//                             //             fit: BoxFit.fitWidth,
-//                             //           ),
-//                             //           backgroundColor:
-//                             //           AppStyles.cutstomIconColor,
-//                             //           radius:
-//                             //           20, // Adjust radius for avatar
-//                             //         ),
-//                             //         Text(items[0].name),
-//                             //       ],
-//                             //     ))),
-//
-//                             FutureBuilder(
-//                               future: delay(3), // Delay for 1 second
-//                               builder: (context, snapshot) {
-//                                 if (snapshot.connectionState ==
-//                                     ConnectionState.done) {
-//                                   return Positioned(
-//                                     left: centerX + 80,
-//                                     bottom: centerY,
-//                                     child: InkWell(
-//                                       onTap: () {
-//                                         showCustomDialog(context);
-//                                       },
-//                                       child: Container(
-//                                         child: Column(
-//                                           children: [
-//                                             CircleAvatar(
-//                                               child: Image.asset(
-//                                                 "assets/images/ListIcons/autobooking.png",
-//                                                 width: 10,
-//                                                 color: Colors.white,
-//                                                 fit: BoxFit.fitWidth,
-//                                               ),
-//                                               backgroundColor:
-//                                                   Color(0xF2A4386B),
-//                                               radius: 20,
-//                                             ),
-//                                             Text(
-//                                               items[0]
-//                                                   .name, // Use items[0].name if available
-//                                               style: TextStyle(
-//                                                 fontFamily: 'Cerapro',
-//                                                 fontSize: 11,
-//                                                 fontWeight: FontWeight.w400,
-//                                                 color: Colors.black,
-//                                               ),
-//                                             ),
-//                                           ],
-//                                         ),
-//                                       ),
-//                                     ),
-//                                   );
-//                                 }
-//                                 return SizedBox(); // Return an empty widget before delay
-//                               },
-//                             ),
-//                             FutureBuilder(
-//                               future: delay(6), // Delay for 3 seconds
-//                               builder: (context, snapshot) {
-//                                 if (snapshot.connectionState ==
-//                                     ConnectionState.done) {
-//                                   return Positioned(
-//                                     right: centerX,
-//                                     bottom: centerY + 90,
-//                                     child: InkWell(
-//                                       onTap: () {
-//                                         showCustomDialog(context);
-//                                       },
-//                                       child: Container(
-//                                         child: Column(
-//                                           children: [
-//                                             CircleAvatar(
-//                                               child: Image.asset(
-//                                                 "assets/images/ListIcons/autobooking.png",
-//                                                 width: 10,
-//                                                 color: Colors.white,
-//                                                 fit: BoxFit.fitWidth,
-//                                               ),
-//                                               backgroundColor:
-//                                                   Color(0xF2A4386B),
-//                                               radius: 20,
-//                                             ),
-//                                             Text(
-//                                               items[1]
-//                                                   .name, // Use items[1].name if available
-//                                               style: TextStyle(
-//                                                 fontFamily: 'Cerapro',
-//                                                 fontSize: 11,
-//                                                 fontWeight: FontWeight.w400,
-//                                                 color: Colors.black,
-//                                               ),
-//                                             ),
-//                                           ],
-//                                         ),
-//                                       ),
-//                                     ),
-//                                   );
-//                                 }
-//                                 return SizedBox(); // Return an empty widget before delay
-//                               },
-//                             ),
-//                           ],
-//                         ),
-//                       ),
-//
-//                       // Container(
-//                       //   child: Center(
-//                       //     child: Text(
-//                       //       "Scanning for nearby devices. Please ensure your Bluetooth is turned on and you are close to the device",
-//                       //       textAlign: TextAlign.center,
-//                       //         style:
-//                       //         AppStyles.customTextStyle(
-//                       //             fontSize: 14.0,
-//                       //             fontWeight:
-//                       //             FontWeight.w400)// Optional: To center the text within its container
-//                       //     ),
-//                       //   ),
-//                       // ),
-//
-//                       FutureBuilder(
-//                         future: Future.delayed(Duration(
-//                             seconds: 3)), // Use Future.delayed for a delay
-//                         builder:
-//                             (BuildContext context, AsyncSnapshot snapshot) {
-//                           if (snapshot.connectionState ==
-//                               ConnectionState.waiting) {
-//                             return Container(
-//                               child: Center(
-//                                 child: Text(
-//                                   "Scanning for nearby devices. Please ensure your Bluetooth is turned on and you are close to the device",
-//                                   textAlign: TextAlign.center,
-//                                   style: AppStyles.customTextStyle(
-//                                     fontSize: 14.0,
-//                                     fontWeight: FontWeight.w400,
-//                                   ), // Style for the text
-//                                 ),
-//                               ),
-//                             );
-//                           } else {
-//                             // Return something else once the Future completes
-//                             return Container(
-//                               child: Center(
-//                                 child: Text(
-//                                   "Device found. Please tap to add the device",
-//                                   textAlign: TextAlign.center,
-//                                   style: AppStyles.customTextStyle(
-//                                     fontSize: 14.0,
-//                                     fontWeight: FontWeight.w400,
-//                                   ), // Style for the text
-//                                 ),
-//                               ),
-//                             );
-//                           }
-//                         },
-//                       )
-//                     ],
-//                   ),
-//                 ),
-//               ),
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-//
-//   Widget buildRadarCircle(double radius, Color color) {
-//     return Container(
-//       width: radius,
-//       height: radius,
-//       decoration: BoxDecoration(
-//         shape: BoxShape.circle,
-//         color: color,
-//       ),
-//     );
-//   }
-//
-//   Widget buildItemDot(Item item) {
-//     double angle =
-//         Random().nextDouble() * 2 * pi; // Random angle for positioning
-//     double distance =
-//         item.distance * _animation.value; // Animated distance from the center
-//     double xOffset = (distance * cos(angle)); // X offset based on angle
-//     double yOffset = (distance * sin(angle)); // Y offset based on angle
-//
-//     return Positioned(
-//       left: xOffset + 125, // Adjust based on your radar circle size
-//       top: yOffset + 125, // Adjust based on your radar circle size
-//       child: Column(
-//         children: [
-//           Container(
-//             width: 8,
-//             height: 8,
-//             decoration: const BoxDecoration(
-//               shape: BoxShape.circle,
-//               color: Colors.red,
-//             ),
-//           ),
-//           const SizedBox(height: 4), // Space between dot and text
-//           Text(
-//             item.name,
-//             style: const TextStyle(color: Colors.black, fontSize: 12),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
-//
-// // Item class to represent device name and distance
-// class Item {
-//   final String name;
-//   final double distance;
-//
-//   Item({required this.name, required this.distance});
-// }
-//
-// // Custom clipper for creating a curved top
-// class TopRoundedRectangleClipper extends CustomClipper<Path> {
-//   final double radius;
-//   final double heightFactor;
-//
-//   TopRoundedRectangleClipper({this.radius = 0.0, this.heightFactor = 0.60});
-//
-//   @override
-//   Path getClip(Size size) {
-//     var clippedHeight = size.height * heightFactor;
-//     var path = Path();
-//
-//     path.moveTo(0, clippedHeight);
-//     path.lineTo(size.width, clippedHeight);
-//     path.lineTo(size.width, radius);
-//     path.arcToPoint(
-//       Offset(size.width - radius, 0),
-//       radius: Radius.circular(radius),
-//       clockwise: false,
-//     );
-//     path.lineTo(radius, 0);
-//     path.arcToPoint(
-//       Offset(0, radius),
-//       radius: Radius.circular(radius),
-//       clockwise: false,
-//     );
-//     path.lineTo(0, clippedHeight);
-//     path.close();
-//
-//     return path;
-//   }
-//
-//   @override
-//   bool shouldReclip(CustomClipper<Path> oldClipper) => false;
-// }
-//
-// void showCustomDialog(BuildContext context) {
-//   showDialog(
-//     context: context,
-//     builder: (BuildContext context) {
-//       return Dialog(
-//         shape: RoundedRectangleBorder(
-//           borderRadius: BorderRadius.circular(20),
-//         ),
-//         child: Container(
-//           padding: EdgeInsets.all(20),
-//           height: 350,
-//           decoration: BoxDecoration(
-//             borderRadius: BorderRadius.circular(20),
-//           ),
-//           child: Column(
-//             mainAxisAlignment: MainAxisAlignment.center,
-//             children: <Widget>[
-//               InkWell(
-//                 onTap: () {
-//                   Navigator.of(context).pop();
-//                 },
-//                 child: Container(
-//                   width: double.infinity,
-//                   child: Align(
-//                     alignment: Alignment.centerRight,
-//                     child: Icon(
-//                       Icons.cancel,
-//                       size: 35,
-//                       color: AppStyles.cutstomIconColor,
-//                     ),
-//                   ),
-//                 ),
-//               ),
-//               Image.asset(
-//                 "assets/images/AddyourdeviceScreen/poupimage.png",
-//                 fit: BoxFit.fitWidth,
-//                 width: 100,
-//                 height: 100,
-//               ),
-//               SizedBox(height: 20),
-//               // Name
-//               Center(
-//                 child: Text(
-//                   'Device Selected',
-//                   style: AppStyles.customTextStyle(
-//                       fontSize: 24.0, fontWeight: FontWeight.w700),
-//                 ),
-//               ),
-//               Center(
-//                 child: Text(
-//                   'Successfully',
-//                   style: AppStyles.customTextStyle(
-//                       fontSize: 24.0, fontWeight: FontWeight.w700),
-//                 ),
-//               ),
-//               SizedBox(height: 20),
-//               // Done Button
-//               SizedBox(
-//                 width: 250,
-//                 child: ElevatedButton(
-//                   onPressed: () async {
-//                     // Navigator.of(context).pop();
-//                     // await Future.delayed(Duration(seconds: 3));
-//                     Navigator.pushReplacement(
-//                         context,
-//                         MaterialPageRoute(
-//                             builder: (context) =>
-//                                 const FullOtherInformation()));
-//                   },
-//                   style: ElevatedButton.styleFrom(
-//                     backgroundColor:
-//                         AppStyles.cutstomIconColor, // Button background color
-//                     foregroundColor: Colors.white, // Button text color
-//                     shape: RoundedRectangleBorder(
-//                       borderRadius: BorderRadius.circular(12), // Curved edges
-//                     ),
-//                     minimumSize: const Size(200, 50),
-//                     padding: const EdgeInsets.symmetric(
-//                         horizontal: 30, vertical: 15), // Adjust button size
-//                     elevation: 5, // Elevation (shadow)
-//                   ),
-//                   child: Text(
-//                     'Done',
-//                     style: AppStyles.customTextStyle(
-//                         fontSize: 15.0, fontWeight: FontWeight.w500),
-//                   ),
-//                 ),
-//               ),
-//             ],
-//           ),
-//         ),
-//       );
-//     },
-//   );
-// }
-//
-// // import 'dart:math';
-// // import 'package:flutter/material.dart';
-// // import 'package:gas_track_ui/utils/utils.dart';
-// //
-// // class AddManuallyDeviceScreen extends StatefulWidget {
-// //   const AddManuallyDeviceScreen({super.key});
-// //
-// //   @override
-// //   State<AddManuallyDeviceScreen> createState() => _AddManuallyDeviceScreenState();
-// // }
-// //
-// // class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
-// //     with SingleTickerProviderStateMixin {
-// //   late AnimationController _controller;
-// //
-// //   @override
-// //   void initState() {
-// //     super.initState();
-// //     _controller = AnimationController(
-// //       duration: const Duration(seconds: 3),
-// //       vsync: this,
-// //     )..repeat(); // Repeat indefinitely to simulate the radar sweep
-// //   }
-// //
-// //   @override
-// //   void dispose() {
-// //     _controller.dispose();
-// //     super.dispose();
-// //   }
-// //
-// //   @override
-// //   Widget build(BuildContext context) {
-// //     var height = MediaQuery.of(context).size.height;
-// //     var width = MediaQuery.of(context).size.width;
-// //
-// //     return Scaffold(
-// //       appBar: AppBar(
-// //         title: const Text("Adding Manually",style: AppStyles.appBarTextStyle,),
-// //         backgroundColor: Colors.transparent, // Makes the background transparent
-// //         elevation: 0, // Removes the shadow below the AppBar
-// //         centerTitle: true, // Optional: centers the title
-// //         iconTheme: const IconThemeData(color: Colors.white), // Back arrow color
-// //         titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20),
-// //       ),
-// //       extendBodyBehindAppBar: true, // Ensures the body goes behind the AppBar
-// //       body: Stack(
-// //         children: [
-// //           // Gradient with Custom Clip Path at the top of the screen
-// //           ClipPath(
-// //             clipper: TopRoundedRectangleClipper(), // Custom clipper for the top curve
-// //             child: Container(
-// //               height: height * 0.30, // Adjust height of the effect
-// //               decoration: const BoxDecoration(
-// //                 gradient: LinearGradient(
-// //                   colors: [Color(0xFFFA7365), Color(0xFF9A4DFF)], // Gradient colors
-// //                   begin: Alignment.topLeft,
-// //                   end: Alignment.bottomRight,
-// //                 ),
-// //               ),
-// //             ),
-// //           ),
-// //           Padding(
-// //             padding: EdgeInsets.only(top: height / 9.5), // Adjust for gradient
-// //             child: Container(
-// //               height: height,
-// //               width: width,
-// //               decoration: BoxDecoration(
-// //                 color: Colors.white54.withOpacity(0.30),
-// //                 borderRadius: BorderRadius.circular(45.0),
-// //               ),
-// //               child: Padding(
-// //                 padding: const EdgeInsets.all(8.0),
-// //                 child: Container(
-// //                   decoration: BoxDecoration(
-// //                     color: Colors.white.withOpacity(0.9),
-// //                     borderRadius: BorderRadius.circular(45.0),
-// //                   ),
-// //                   child: Column(
-// //                     mainAxisAlignment: MainAxisAlignment.center,
-// //                     crossAxisAlignment: CrossAxisAlignment.center,
-// //                     children: <Widget>[
-// //                       Center(
-// //                         child: Stack(
-// //                           alignment: Alignment.center,
-// //                           children: [
-// //                             // Radar Circles
-// //                             buildRadarCircle(250, Colors.purple.withOpacity(0.1)),
-// //                             buildRadarCircle(200, Colors.purple.withOpacity(0.2)),
-// //                             buildRadarCircle(150, Colors.purple.withOpacity(0.3)),
-// //                             buildRadarCircle(100, Colors.purple.withOpacity(0.4)),
-// //
-// //                             // Radar Beam
-// //                             // AnimatedBuilder(
-// //                             //   animation: _controller,
-// //                             //   builder: (context, child) {
-// //                             //     return Transform.rotate(
-// //                             //       angle: _controller.value * 2 * pi,
-// //                             //       child: CustomPaint(
-// //                             //         painter: RadarBeamPainter(),
-// //                             //         child: Container(),
-// //                             //       ),
-// //                             //     );
-// //                             //   },
-// //                             // ),
-// //
-// //                             // Mock Devices (Positioned randomly around the radar)
-// //                             // Positioned(
-// //                             //   top: 100,
-// //                             //   left: 120,
-// //                             //   child: Icon(Icons.bluetooth, color: Colors.blue, size: 30),
-// //                             // ),
-// //                             // Positioned(
-// //                             //   bottom: 90,
-// //                             //   right: 80,
-// //                             //   child: Icon(Icons.bluetooth, color: Colors.blue, size: 30),
-// //                             // ),
-// //                             // Positioned(
-// //                             //   bottom: 150,
-// //                             //   left: 140,
-// //                             //   child: Icon(Icons.bluetooth, color: Colors.blue, size: 30),
-// //                             // ),
-// //                           ],
-// //                         ),
-// //                       ),
-// //                       SizedBox(height: 20,),
-// //                       Align(alignment:Alignment.center,child: Center(child: Text("Scanning for nearby devices. Please ensure your Bluetooth is turned on and you are close to the device"))),
-// //                     ],
-// //                   ),
-// //                 ),
-// //               ),
-// //             ),
-// //           ),
-// //         ],
-// //       ),
-// //     );
-// //   }
-// //
-// //   Widget buildRadarCircle(double radius, Color color) {
-// //     return Container(
-// //       width: radius,
-// //       height: radius,
-// //       decoration: BoxDecoration(
-// //         shape: BoxShape.circle,
-// //         color: color,
-// //       ),
-// //     );
-// //   }
-// // }
-// //
-// // // Custom clipper for creating a curved top
-// // class TopRoundedRectangleClipper extends CustomClipper<Path> {
-// //   final double radius; // Controls the corner radius
-// //   final double heightFactor; // Controls the height to clip
-// //
-// //   // Default radius is 30, and heightFactor is 0.25 (i.e., 25% of the container height)
-// //   TopRoundedRectangleClipper({this.radius = 00.0, this.heightFactor = 0.60});
-// //
-// //   @override
-// //   Path getClip(Size size) {
-// //     var clippedHeight = size.height * heightFactor; // Calculate clipped height based on the heightFactor
-// //     var path = Path();
-// //
-// //     // Start from bottom-left corner
-// //     path.moveTo(0, clippedHeight);
-// //
-// //     // Bottom line to the right
-// //     path.lineTo(size.width, clippedHeight);
-// //
-// //     // Line to the top-right corner but we will start curving for the top corners
-// //     path.lineTo(size.width, radius);
-// //
-// //     // Create a rounded corner on the top-right
-// //     path.arcToPoint(
-// //       Offset(size.width - radius, 0),
-// //       radius: Radius.circular(radius),
-// //       clockwise: false,
-// //     );
-// //
-// //     // Line to the top-left with rounded corner
-// //     path.lineTo(radius, 0);
-// //     path.arcToPoint(
-// //       Offset(0, radius),
-// //       radius: Radius.circular(radius),
-// //       clockwise: false,
-// //     );
-// //
-// //     // Close the path back to the bottom-left corner
-// //     path.lineTo(0, clippedHeight);
-// //     path.close(); // Close the path to form the shape
-// //
-// //     return path;
-// //   }
-// //
-// //   @override
-// //   bool shouldReclip(CustomClipper<Path> oldClipper) => false;
-// // }
-// //
-// // class RadarBeamPainter extends CustomPainter {
-// //   @override
-// //   void paint(Canvas canvas, Size size) {
-// //     final Paint paint = Paint()
-// //       ..shader = RadialGradient(
-// //         colors: [
-// //           Colors.purple.withOpacity(0.7),
-// //           Colors.transparent,
-// //         ],
-// //       ).createShader(Rect.fromCircle(center: Offset.zero, radius: 200));
-// //
-// //     canvas.drawArc(
-// //       Rect.fromCircle(center: Offset.zero, radius: 200),
-// //       -pi / 2,
-// //       pi / 6, // Radar beam width
-// //       true,
-// //       paint,
-// //     );
-// //   }
-// //
-// //   @override
-// //   bool shouldRepaint(covariant CustomPainter oldDelegate) {
-// //     return true; // Always repaint the radar beam
-// //   }
-// // }
-// //
-// //
-// //
-// //
-// //
-// //
-// //
-// // // import 'package:flutter/material.dart';
-// // // import 'package:gas_track_ui/screen/HomeScreen.dart';
-// // //
-// // //
-// // //
-// // // class AddManuallyDeviceScreen extends StatefulWidget {
-// // //   const AddManuallyDeviceScreen({super.key});
-// // //
-// // //   @override
-// // //   State<AddManuallyDeviceScreen> createState() => _AddManuallyDeviceScreenState();
-// // // }
-// // //
-// // // class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen> {
-// // //   @override
-// // //   Widget build(BuildContext context) {
-// // //     var height = MediaQuery.of(context).size.height;
-// // //     var width = MediaQuery.of(context).size.width;
-// // //     int activeStep = 2;
-// // //
-// // //     return Scaffold(
-// // //       appBar: AppBar(
-// // //         title: const Text("Adding Manually"),
-// // //         backgroundColor: Colors.transparent, // Makes the background transparent
-// // //         elevation: 0, // Removes the shadow below the AppBar
-// // //         centerTitle: true, // Optional: centers the title
-// // //         iconTheme:
-// // //         const IconThemeData(color: Colors.white), // Makes the back arrow white
-// // //         titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20),
-// // //       ),
-// // //       extendBodyBehindAppBar: true, // Ensures the body goes behind the AppBar
-// // //       body: Stack(
-// // //         children: [
-// // //           // Gradient with Custom Clip Path at the top of the screen
-// // //           ClipPath(
-// // //             clipper:
-// // //             TopRoundedRectangleClipper(), // Custom clipper for the top curve
-// // //             child: Container(
-// // //               height: height * 0.30, // Adjust height of the effect
-// // //               decoration: const BoxDecoration(
-// // //                 gradient: LinearGradient(
-// // //                   colors: [
-// // //                     Color(0xFFFA7365),
-// // //                     Color(0xFF9A4DFF)
-// // //                   ], // Gradient colors
-// // //                   begin: Alignment.topLeft,
-// // //                   end: Alignment.bottomRight,
-// // //                 ),
-// // //               ),
-// // //             ),
-// // //           ),
-// // //
-// // //           Padding(
-// // //             padding: EdgeInsets.only(top: height / 9.5), // Adjust for gradient
-// // //             child: Container(
-// // //               height: height,
-// // //               width: width,
-// // //               decoration: BoxDecoration(
-// // //                 color: Colors.white54.withOpacity(0.30),
-// // //                 borderRadius: BorderRadius.circular(45.0),
-// // //               ),
-// // //               child: Padding(
-// // //                 padding: const EdgeInsets.only(top: 8.0),
-// // //                 child: Container(
-// // //                   width: width,
-// // //                   height: height,
-// // //                   decoration: BoxDecoration(
-// // //                     color: Colors.white54.withOpacity(0.20),
-// // //                     borderRadius: BorderRadius.circular(45.0),
-// // //                   ),
-// // //                   child: Padding(
-// // //                     padding: const EdgeInsets.only(top: 10.0),
-// // //                     child: Container(
-// // //                       width: width,
-// // //                       height: height,
-// // //                       decoration: BoxDecoration(
-// // //                         color: Colors.white,
-// // //                         borderRadius: BorderRadius.circular(45.0),
-// // //                       ),
-// // //                       child: Padding(
-// // //                           padding: const EdgeInsets.only(top: 5.0),
-// // //                           child: Column(
-// // //                             children: <Widget>[
-// // //
-// // //
-// // //
-// // //
-// // //                             ],
-// // //                           )),
-// // //                     ),
-// // //                   ),
-// // //                 ),
-// // //               ),
-// // //             ),
-// // //           ),
-// // //         ],
-// // //       ),
-// // //     );
-// // //   }
-// // // }
-// // //
-// // // // Custom clipper for creating a curved top
-// // // class TopRoundedRectangleClipper extends CustomClipper<Path> {
-// // //   final double radius; // Controls the corner radius
-// // //   final double heightFactor; // Controls the height to clip
-// // //
-// // //   // Default radius is 30, and heightFactor is 0.25 (i.e., 25% of the container height)
-// // //   TopRoundedRectangleClipper({this.radius = 00.0, this.heightFactor = 0.60});
-// // //
-// // //   @override
-// // //   Path getClip(Size size) {
-// // //     var clippedHeight = size.height *
-// // //         heightFactor; // Calculate clipped height based on the heightFactor
-// // //     var path = Path();
-// // //
-// // //     // Start from bottom-left corner
-// // //     path.moveTo(0, clippedHeight);
-// // //
-// // //     // Bottom line to the right
-// // //     path.lineTo(size.width, clippedHeight);
-// // //
-// // //     // Line to the top-right corner but we will start curving for the top corners
-// // //     path.lineTo(size.width, radius);
-// // //
-// // //     // Create a rounded corner on the top-right
-// // //     path.arcToPoint(
-// // //       Offset(size.width - radius, 0),
-// // //       radius: Radius.circular(radius),
-// // //       clockwise: false,
-// // //     );
-// // //
-// // //     // Line to the top-left with rounded corner
-// // //     path.lineTo(radius, 0);
-// // //     path.arcToPoint(
-// // //       Offset(0, radius),
-// // //       radius: Radius.circular(radius),
-// // //       clockwise: false,
-// // //     );
-// // //
-// // //     // Close the path back to the bottom-left corner
-// // //     path.lineTo(0, clippedHeight);
-// // //     path.close(); // Close the path to form the shape
-// // //
-// // //     return path;
-// // //   }
-// // //
-// // //   @override
-// // //   bool shouldReclip(CustomClipper<Path> oldClipper) => false;
-// // // }

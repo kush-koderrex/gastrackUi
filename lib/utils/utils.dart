@@ -6,6 +6,7 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:gas_track_ui/utils/widgets.dart';
 
 
@@ -56,6 +57,27 @@ class Palette {
 
 
 class Utils {
+
+  static String weight = "0";
+  static String days = "0";
+  static String battery = "0";
+  static String remainGas = "0";
+
+  static String serviceUUID = "9999";
+  static String writeCharacteristicUUID = "9191";
+  static String readCharacteristicUUID = "8888";
+
+  // static String serviceUUID = "f000c0c0-0451-4000-b000-000000000000";
+  // static String writeCharacteristicUUID = "f000c0c1-0451-4000-b000-000000000000";
+  // static String readCharacteristicUUID = "f000c0c2-0451-4000-b000-000000000000";
+
+  static late BluetoothCharacteristic Writecharacteristic;
+  static late BluetoothCharacteristic Readcharacteristic;
+
+  static late BluetoothDevice device;
+
+
+  static bool _isDeviceConnected = false;
   static BuildContext? _loaderContext;
   static BuildContext? _loadingDialoContext;
   static bool _isLoaderShowing = false;
