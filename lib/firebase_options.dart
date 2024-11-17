@@ -55,7 +55,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '22846129147',
     projectId: 'gastrack-fa2c6',
     databaseURL: 'https://gastrack-fa2c6-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'gastrack-fa2c6.appspot.com',
+    storageBucket: 'gastrack-fa2c6.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
@@ -64,7 +64,10 @@ class DefaultFirebaseOptions {
     messagingSenderId: '22846129147',
     projectId: 'gastrack-fa2c6',
     databaseURL: 'https://gastrack-fa2c6-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'gastrack-fa2c6.appspot.com',
+    storageBucket: 'gastrack-fa2c6.firebasestorage.app',
+    androidClientId: '22846129147-hn5j6nh1s57s07o1lut7tmk024gcng8d.apps.googleusercontent.com',
+    iosClientId: '22846129147-07jmaq5pl9nej2otggpmi7quiqo518gu.apps.googleusercontent.com',
     iosBundleId: 'com.example.gasTrackUi',
   );
+
 }

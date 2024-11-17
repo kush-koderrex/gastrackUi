@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -13,6 +12,7 @@ import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'dart:developer' as developer;
 
 import 'package:permission_handler/permission_handler.dart';
+import 'package:vibration/vibration.dart';
 
 class DeviceResponse {
   String deviceId;
@@ -73,15 +73,12 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
   late Animation<double> _animation;
   List<ScanResult> _scanResults = [];
   late BluetoothCharacteristic characteristic;
-  // String serviceUUID = "9999";
-  // String writeCharacteristicUUID = "9191";
-  // String readCharacteristicUUID = "8888";
-  //
-  // late BluetoothCharacteristic Writecharacteristic;
   String formattedDate = '';
 
   bool isLoading = false;
   bool isLoadingIndicater = false;
+
+  Map<int, bool> loadingStates = {};
 
   List<BluetoothDevice> _systemDevices = [];
   List<BluetoothService> _services = [];
@@ -94,7 +91,7 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
   late StreamSubscription<List<int>> _lastValueSubscription;
 
   static const platform =
-  MethodChannel('com.gastrack.background/gtrack_process');
+      MethodChannel('com.gastrack.background/gtrack_process');
   String _statusMessage = '';
   String _logContent = '';
   DeviceResponse? _deviceResponse;
@@ -128,29 +125,10 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
     }
   }
 
-  // Future onSubscribePressed(BluetoothCharacteristic characteristic) async {
-  //   try {
-  //     String op =
-  //     characteristic.isNotifying == false ? "Subscribe" : "Unubscribe";
-  //     await characteristic.setNotifyValue(characteristic.isNotifying == false);
-  //     Snackbar.show(ABC.c, "$op : Success", success: true);
-  //     print("Subscribed Service${characteristic}");
-  //     if (characteristic.properties.read) {
-  //       await characteristic.read();
-  //     }
-  //     if (mounted) {
-  //       // setState(() {});
-  //     }
-  //   } catch (e) {
-  //     Snackbar.show(ABC.c, prettyException("Subscribe Error:", e),
-  //         success: false);
-  //   }
-  // }
-
-
   Future onSubscribePressed(BluetoothCharacteristic characteristic) async {
     try {
-      String op = characteristic.isNotifying == false ? "Subscribe" : "Unubscribe";
+      String op =
+          characteristic.isNotifying == false ? "Subscribe" : "Unubscribe";
       print("setNotifyValueop");
       print(op);
       print(characteristic.isNotifying == false);
@@ -168,7 +146,7 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
         }
       }
       if (characteristic.properties.notify) {
-        await characteristic.setNotifyValue(true);  // Enable notifications
+        await characteristic.setNotifyValue(true); // Enable notifications
       } else {
         developer.log("This characteristic does not support NOTIFY.");
       }
@@ -181,29 +159,20 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
     }
   }
 
-  Future<void> subscribeToCharacteristic(BluetoothCharacteristic characteristic) async {
+  Future<void> subscribeToCharacteristic(
+      BluetoothCharacteristic characteristic) async {
     try {
       if (characteristic.properties.notify) {
-        await characteristic.setNotifyValue(true);  // Enable notifications
-
-
-        // characteristic.lastValueStream.listen((value) {
-        //   // Process the incoming notification data here
-        //   developer.log("Notification received: $value");
-        //
-        // });
-        //
-        // developer.log("Subscribed to notifications for characteristic ${characteristic.uuid}");
+        await characteristic.setNotifyValue(true); // Enable notifications
       } else {
         developer.log("ERROR: This characteristic does not support NOTIFY.");
       }
     } catch (e) {
       developer.log("Failed to subscribe to characteristic: $e", error: e);
-      await Future.delayed(Duration(seconds: 1));
+      await Future.delayed(const Duration(seconds: 1));
       await characteristic.setNotifyValue(true);
     }
   }
-
 
   Future onReadPressed(BluetoothCharacteristic characteristic) async {
     try {
@@ -236,7 +205,9 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
 
   void onConnectPressed(BluetoothDevice device) {
     device.connectAndUpdateStream().then((_) {
-      showCustomDialog(context);
+      showCustomDialog(context, () {
+        print("Dialog was closed, perform any action here.");
+      });
       // If the connection was successful, print "Connected"
       print("Connected");
       Fluttertoast.showToast(msg: "Device Connected");
@@ -289,7 +260,7 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
   }
 
   Future<void> _launchTask(String deviceName) async {
-    print("Task Launched Succes");
+    print("Task Launched Success");
     String result;
     await requestPermissions();
     try {
@@ -305,33 +276,6 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
       _statusMessage = result;
     });
   }
-
-  // This function updates the items list with device information from scan results
-  // void updateItemsFromScanResults(List<ScanResult> scanResults) {
-  //   items.clear(); // Clear the previous items
-  //
-  //   // Populate the items list with the names and distances from the scan results
-  //   for (var result in scanResults) {
-  //     var deviceInfo = Item(
-  //       name: result.device.name.isNotEmpty ? result.device.name : "Unnamed Device", // Fallback for empty names
-  //       distance: result.rssi.toDouble(), // Use RSSI as an example for distance
-  //     );
-  //
-  //     items.add(deviceInfo); // Add the device info to the items list
-  //   }
-  // }
-
-  // Example usage
-  // void onScanResultsUpdated(List<ScanResult> scanResults) {
-  //   updateItemsFromScanResults(scanResults);
-  //   printDeviceList();
-  // }
-  //
-  // void printDeviceList() {
-  //   for (var item in items) {
-  //     print('Device Name: ${item.name}, Distance: ${item.distance} meters');
-  //   }
-  // }
 
   late StreamSubscription<List<ScanResult>> _scanResultsSubscription;
 
@@ -384,20 +328,14 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
   void dispose() {
     _scanResultsSubscription.cancel();
     _controller.dispose();
-    _lastValueSubscription.cancel();
+    // _lastValueSubscription.cancel();
 
-    isConnected =false;
-    isSubscribe =false;
-    isGetData =false;
-    count =0;
+    isConnected = false;
+    isSubscribe = false;
+    isGetData = false;
+    count = 0;
     super.dispose();
   }
-
-  // void onConnectPressed(BluetoothDevice device) {
-  //   device.connectAndUpdateStream().catchError((e) {
-  //     Snackbar.show(ABC.c, prettyException("Connect Error:", e), success: false);
-  //   });
-  // }
 
   Future onScanPressed() async {
     try {
@@ -425,7 +363,7 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
       // Connection failed, retry after delay
       Snackbar.show(ABC.c, "Connect Error: ${prettyException("Error:", e)}",
           success: false);
-      Future.delayed(Duration(seconds: 5), () {
+      Future.delayed(const Duration(seconds: 5), () {
         connectDevice(device); // Retry connection
       });
     });
@@ -471,174 +409,184 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
     }
   }
 
-  bool isConnected =false;
-  bool isSubscribe =false;
-  bool isGetData =false;
-  var count  =0;
+  bool isConnected = false;
+  bool isSubscribe = false;
+  bool isGetData = false;
+  var count = 0;
   bool isCount = false;
 
-
-  Future GetData()async
-  {
-    isLoading = true;
-    print("Searched Device");
-    Utils.device =_scanResults[0].device;
-    developer.log("Scan Results:-${_scanResults[0].toString()}");
-    developer.log("Scan Results:-${_scanResults[0].runtimeType.toString()}");
-    developer.log("Scan Results array:-${_scanResults.toString()}");
-    developer.log("Scan length:-${_scanResults.length.toString()}");
-    print(_scanResults[0]);
-    print(_scanResults[0].device.toString());
-    print(_scanResults[0].device.connect());
-    print(_scanResults[0].device.connectAndUpdateStream());
-    _scanResults[0].device.connectAndUpdateStream().catchError((e) {
-      Snackbar.show(
-          ABC.c,
-          prettyException(
-              "Connect Error:",
-              e),
-          success: false);
-    });
-    print("isConnected:- ${_scanResults[0].device.isConnected}");
-    // print(_scanResults[0].device.isConnected);
-    if (_scanResults[0].device.isConnected == true) {
-
-      // print(_scanResults[0].device.discoverServices());
-      _services = await _scanResults[0].device.discoverServices();
-      print("_servicestest");
-      developer.log(_services.toString());
-
-      for (var service in _services) {
-        // Loop through each characteristic in the service
-        for (var characteristic in service.characteristics) {
-          // Check if the characteristic UUID matches the writeCharacteristicUUID
-          if (characteristic.uuid.toString() == Utils.writeCharacteristicUUID) {
-            Utils.Writecharacteristic = characteristic;
-          }
-          // Check if the characteristic UUID matches the readCharacteristicUUID
-          else if (characteristic.uuid.toString() == Utils.readCharacteristicUUID) {
-            Utils.Readcharacteristic = characteristic;
-          }
-        }
+  Future<void> getConnection() async {
+    try {
+      Utils.device = _scanResults.first.device;
+      print("Connecting to device: ${Utils.device}");
+      // Attempt connection only once
+      await Utils.device.connect();
+      bool connectionStatus = await Utils.device.isConnected;
+      if (connectionStatus) {
+        Fluttertoast.showToast(
+          msg: 'Device connected successfully!',
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Colors.black,
+          textColor: Colors.white,
+          fontSize: 16.0,
+        );
+        isConnected = true;
+        Vibration.vibrate();
+        Future.delayed(const Duration(seconds: 1), () {
+          showCustomDialog(context, () async {
+            await Future.delayed(const Duration(seconds: 1));
+            Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const FullOtherInformation()));
+          });
+        });
+      } else {
+        print("Device connection failed.");
       }
-
-      // developer.log("Readcharacteristic:-${Readcharacteristic.toString()}");
-      developer.log("Readcharacteristic:-${Utils.Readcharacteristic.characteristicUuid.toString()}");
-
-      // developer.log("Writecharacteristic:-${Writecharacteristic.toString()}");
-      developer.log("Writecharacteristic:-${Utils.Writecharacteristic.characteristicUuid.toString()}");
-
-      for (var service in _services) {
-        // Loop through each characteristic in the service
-        for (var characteristic in service.characteristics) {
-          // Add each characteristic to the _characteristic list
-          _characteristic.add(characteristic);
-        }
-      }
-      // print("_characteristic-------------------------->");
-      developer.log("_characteristic--->" + _characteristic.toString());
-      print("_characteristic length ->${_characteristic.length}");
-
-      onSubscribePressed(Utils.Readcharacteristic);
-      subscribeToCharacteristic(Utils.Readcharacteristic);
-
-
-      print("Remote:-${Utils.Writecharacteristic.remoteId}");
-      print("serviceUuid:-${Utils.Writecharacteristic.serviceUuid}");
-      print("characteristicUuid:-${Utils.Writecharacteristic.characteristicUuid}");
-      print("secondaryServiceUuid:-${Utils.Writecharacteristic.secondaryServiceUuid}");
-
-      // onSubscribePressed(Utils.Readcharacteristic);
-      // print("Read---->Read---->");
-      print("Read From:-${Utils.Readcharacteristic.characteristicUuid}");
-      print("Is Subscribed:-${Utils.Readcharacteristic.isNotifying}");
-
-      if (Utils.Readcharacteristic.isNotifying ==
-          true) {
-        onWritePressedgenreq(Utils.Writecharacteristic);
-        // print(_characteristic[_characteristic.length-2].characteristicUuid);
-        onReadPressed(Utils.Readcharacteristic);
-        _lastValueSubscription = Utils.Readcharacteristic.lastValueStream.listen((value) {
-          _value = value;});
-
-        String data = _value.toString();
-        // print("Data:-${data}");
-        print("RecData:-${data}");
-
-
-        if(_value.isNotEmpty){
-          List<String> hexList = _value
-              .map((decimal) => decimal.toRadixString(16).padLeft(2, '0'))
-              .toList();
-          String hexString = hexList.join('');
-          print("When Data is not null:-${data}");
-          print("hexString:-${hexString}");
-
-          _deviceResponse = parseDeviceResponse(hexString);
-
-          // print(_deviceResponse?.battery.toString());
-          // setState(() {
-          Utils.battery = "${_deviceResponse?.battery.toString()}";
-          Utils.weight = "${_deviceResponse?.beforeDecimal}.${_deviceResponse?.afterDecimal}";
-          Utils.remainGas = calculateGasPercentage(double.parse(Utils.weight)).toStringAsFixed(0);
-          // });
-          print("battery:-${_deviceResponse?.battery.toString()}");
-          print("weight:-${_deviceResponse?.beforeDecimal}.${_deviceResponse?.afterDecimal}");
-
-          Fluttertoast.showToast(
-            msg: 'Device Connect successfully!',
-            toastLength: Toast.LENGTH_LONG,
-            gravity: ToastGravity.BOTTOM,
-            backgroundColor: Colors.black,
-            textColor: Colors.white,
-            fontSize: 16.0,
-          );
-          Future.delayed(
-              Duration(
-                  seconds: 1),
-                  () {
-                _lastValueSubscription.cancel();
-                showCustomDialog(context);
-              });
-          isLoading = false;
-
-          isGetData=true;
-        }
-        isSubscribe = true;
-      }
-      isConnected =true;
+    } catch (e) {
+      print("Connection error: $e");
+      Fluttertoast.showToast(
+        msg: 'Connection error!',
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
     }
-
-    // onConnectPressed(_scanResults[0].device);
-    // onConnectPressedee(_scanResults[0].device);
-    // onDiscoverServicesPressed(_scanResults[0].device);
-
-    // _launchTask(_scanResults[0].device.toString());
-
-    // showCustomDialog(context);
   }
 
-
-
-  // void onConnectPressed(BluetoothDevice device) {
-  //   // Try to connect to the device
-  //   device.connect().then((_) {
-  //     print("<-------------Connected --------------->");
-  //     // Connection successful, show success toast
-  //     Snackbar.show(ABC.c, "Connected to ${device.remoteId}", success: true);
-  //   }).catchError((e) {
-  //     print("<------------- Not Connected --------------->");
-  //     // Connection failed, show error toast
-  //     Snackbar.show(ABC.c, prettyException("Connect Error:", e), success: false);
+  // Future GetData() async {
+  //   isLoading = true;
+  //   print("Searched Device");
+  //   Utils.device = _scanResults[0].device;
+  //   developer.log("Scan Results:-${_scanResults[0].toString()}");
+  //   developer.log("Scan Results:-${_scanResults[0].runtimeType.toString()}");
+  //   developer.log("Scan Results array:-${_scanResults.toString()}");
+  //   developer.log("Scan length:-${_scanResults.length.toString()}");
+  //   print(_scanResults[0]);
+  //   print(_scanResults[0].device.toString());
+  //   print(_scanResults[0].device.connect());
+  //   print(_scanResults[0].device.connectAndUpdateStream());
+  //   _scanResults[0].device.connectAndUpdateStream().catchError((e) {
+  //     Snackbar.show(ABC.c, prettyException("Connect Error:", e),
+  //         success: false);
   //   });
+  //   print("isConnected:- ${_scanResults[0].device.isConnected}");
+  //   if (_scanResults[0].device.isConnected == true) {
+  //     _services = await _scanResults[0].device.discoverServices();
+  //     print("_servicestest");
+  //     developer.log(_services.toString());
+  //
+  //     for (var service in _services) {
+  //       // Loop through each characteristic in the service
+  //       for (var characteristic in service.characteristics) {
+  //         // Check if the characteristic UUID matches the writeCharacteristicUUID
+  //         if (characteristic.uuid.toString() == Utils.writeCharacteristicUUID) {
+  //           Utils.Writecharacteristic = characteristic;
+  //         }
+  //         // Check if the characteristic UUID matches the readCharacteristicUUID
+  //         else if (characteristic.uuid.toString() ==
+  //             Utils.readCharacteristicUUID) {
+  //           Utils.Readcharacteristic = characteristic;
+  //         }
+  //       }
+  //     }
+  //     developer.log(
+  //         "Readcharacteristic:-${Utils.Readcharacteristic.characteristicUuid.toString()}");
+  //
+  //     // developer.log("Writecharacteristic:-${Writecharacteristic.toString()}");
+  //     developer.log(
+  //         "Writecharacteristic:-${Utils.Writecharacteristic.characteristicUuid.toString()}");
+  //
+  //     for (var service in _services) {
+  //       // Loop through each characteristic in the service
+  //       for (var characteristic in service.characteristics) {
+  //         // Add each characteristic to the _characteristic list
+  //         _characteristic.add(characteristic);
+  //       }
+  //     }
+  //     // print("_characteristic-------------------------->");
+  //     developer.log("_characteristic--->" + _characteristic.toString());
+  //     print("_characteristic length ->${_characteristic.length}");
+  //
+  //     onSubscribePressed(Utils.Readcharacteristic);
+  //     subscribeToCharacteristic(Utils.Readcharacteristic);
+  //
+  //     print("Remote:-${Utils.Writecharacteristic.remoteId}");
+  //     print("serviceUuid:-${Utils.Writecharacteristic.serviceUuid}");
+  //     print(
+  //         "characteristicUuid:-${Utils.Writecharacteristic.characteristicUuid}");
+  //     print(
+  //         "secondaryServiceUuid:-${Utils.Writecharacteristic.secondaryServiceUuid}");
+  //
+  //     // onSubscribePressed(Utils.Readcharacteristic);
+  //     // print("Read---->Read---->");
+  //     print("Read From:-${Utils.Readcharacteristic.characteristicUuid}");
+  //     print("Is Subscribed:-${Utils.Readcharacteristic.isNotifying}");
+  //
+  //     if (Utils.Readcharacteristic.isNotifying == true) {
+  //       onWritePressedgenreq(Utils.Writecharacteristic);
+  //       // print(_characteristic[_characteristic.length-2].characteristicUuid);
+  //       onReadPressed(Utils.Readcharacteristic);
+  //       _lastValueSubscription =
+  //           Utils.Readcharacteristic.lastValueStream.listen((value) {
+  //             _value = value;
+  //           });
+  //
+  //       String data = _value.toString();
+  //       // print("Data:-${data}");
+  //       print("RecData:-${data}");
+  //
+  //       if (_value.isNotEmpty) {
+  //         List<String> hexList = _value
+  //             .map((decimal) => decimal.toRadixString(16).padLeft(2, '0'))
+  //             .toList();
+  //         String hexString = hexList.join('');
+  //         print("When Data is not null:-${data}");
+  //         print("hexString:-${hexString}");
+  //
+  //         _deviceResponse = parseDeviceResponse(hexString);
+  //
+  //         // print(_deviceResponse?.battery.toString());
+  //         // setState(() {
+  //         Utils.battery = "${_deviceResponse?.battery.toString()}";
+  //         Utils.weight =
+  //         "${_deviceResponse?.beforeDecimal}.${_deviceResponse?.afterDecimal}";
+  //         Utils.remainGas = calculateGasPercentage(double.parse(Utils.weight))
+  //             .toStringAsFixed(0);
+  //         // });
+  //         print("battery:-${_deviceResponse?.battery.toString()}");
+  //         print(
+  //             "weight:-${_deviceResponse?.beforeDecimal}.${_deviceResponse?.afterDecimal}");
+  //
+  //         Fluttertoast.showToast(
+  //           msg: 'Device Connect successfully!',
+  //           toastLength: Toast.LENGTH_LONG,
+  //           gravity: ToastGravity.BOTTOM,
+  //           backgroundColor: Colors.black,
+  //           textColor: Colors.white,
+  //           fontSize: 16.0,
+  //         );
+  //         Future.delayed(Duration(seconds: 1), () {
+  //           _lastValueSubscription.cancel();
+  //           showCustomDialog(context);
+  //         });
+  //         isLoading = false;
+  //
+  //         isGetData = true;
+  //       }
+  //       isSubscribe = true;
+  //     }
+  //     isConnected = true;
+  //   }
   // }
-
 
   @override
   Widget build(BuildContext context) {
     developer.log("_scanResults ---->${_scanResults.toString()}");
-    // developer.log("items ---->${items}");
-    // developer.log("items ---->${items[2].name}");
 
     var height = MediaQuery.of(context).size.height;
     var width = MediaQuery.of(context).size.width;
@@ -717,7 +665,6 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                                   children: [
                                     Center(
                                       child: AnimatedBuilder(
-
                                         animation: _animation,
                                         builder: (context, child) {
                                           return Stack(
@@ -756,7 +703,7 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
 
                                     FutureBuilder(
                                       future:
-                                      Future.delayed(Duration(seconds: 3)),
+                                          Future.delayed(const Duration(seconds: 3)),
                                       builder: (BuildContext context,
                                           AsyncSnapshot snapshot) {
                                         // Check the connection state of the Future
@@ -764,7 +711,7 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                                             ConnectionState.waiting) {
                                           // Optionally, show a loading indicator while waiting
                                           return Container();
-                                            // Center(
+                                          // Center(
                                           //     child:
                                           //     CircularProgressIndicator());
                                         } else {
@@ -775,93 +722,118 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                                                 Positioned(
                                                   left: centerX + 80,
                                                   bottom: centerY,
-                                                  child: InkWell(
-                                                    onTap: () async {
-                                                        var count =0;
-                                                        while(!isConnected || !isSubscribe || !isGetData){
-                                                          print("isConnected:-${isConnected}");
-                                                          print("isSubscribe:-${isSubscribe}");
-                                                          print("isGetData:-${isGetData}");
-
-                                                          await Future.delayed(
-                                                              Duration(
-                                                                  seconds:
-                                                                  5));
-
-                                                          GetData();
-                                                          count++;
-                                                          print("while Count:-${count}");
-                                                          print("while isConnected :-${isConnected}");
-                                                          print("while isSubscribe:-${isSubscribe}");
-                                                        }
-
-
-                                                      // GetData();
-                                                      // if (count<5){
-                                                      //   while(!isConnected || !isSubscribe || !isGetData  ){
-                                                      //     print("isConnected:-${isConnected}");
-                                                      //     print("isSubscribe:-${isSubscribe}");
-                                                      //     print("isGetData:-${isGetData}");
-                                                      //     await Future.delayed(
-                                                      //         Duration(
-                                                      //             seconds:
-                                                      //             1));
-                                                      //
-                                                      //     GetData();
-                                                      //     print("Count:-${count}");
-                                                      //     count++;
-                                                      //
-                                                      //
-                                                      //   }
-                                                      // }else{
-                                                      //   Fluttertoast.showToast(
-                                                      //     msg:
-                                                      //     'Something Went Wrong',
-                                                      //     toastLength:
-                                                      //     Toast.LENGTH_LONG,
-                                                      //     gravity: ToastGravity
-                                                      //         .BOTTOM,
-                                                      //     backgroundColor:
-                                                      //     Colors.green,
-                                                      //     textColor:
-                                                      //     Colors.white,
-                                                      //     fontSize: 16.0,
-                                                      //   );
-                                                      // }
-
+                                                  child: ConnectionAvatar(
+                                                    deviceName: _scanResults[0]
+                                                        .device
+                                                        .platformName, // Accessing item name
+                                                    onConnect: () async {
+                                                      var attempt = 0;
+                                                      while (!isConnected) {
+                                                        print("Attempt: $attempt");
+                                                        print("isConnected: $isConnected");
+                                                        print("isSubscribe: $isSubscribe");
+                                                        print("isGetData: $isGetData");
+                                                        await Future.delayed(const Duration(seconds: 5));
+                                                        await getConnection();
+                                                        attempt++;
+                                                        print("Current isConnected: $isConnected");
+                                                        print("Current isSubscribe: $isSubscribe");
+                                                      }
+                                                      print("Connection successful after $attempt attempts.");
                                                     },
-
-                                                    child: Column(
-                                                      children: [
-                                                        CircleAvatar(
-                                                          child: Image.asset(
-                                                            "assets/images/ListIcons/autobooking.png",
-                                                            width: 10,
-                                                            color: Colors.white,
-                                                            fit:
-                                                            BoxFit.fitWidth,
-                                                          ),
-                                                          backgroundColor:
-                                                          Color(0xF2A4386B),
-                                                          radius: 20,
-                                                        ),
-                                                        Text(
-                                                          _scanResults[0]
-                                                              .device
-                                                              .platformName, // Accessing item name
-                                                          style: TextStyle(
-                                                            fontFamily:
-                                                            'Cerapro',
-                                                            fontSize: 11,
-                                                            fontWeight:
-                                                            FontWeight.w400,
-                                                            color: Colors.black,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
                                                   ),
                                                 ),
+
+                                              // Positioned(
+                                              //     left: centerX + 80,
+                                              //     bottom: centerY,
+                                              //     child: InkWell(
+                                              //       onTap: () async {
+                                              //         var attempt = 0;
+                                              //
+                                              //         while (!isConnected) {
+                                              //           print(
+                                              //               "Attempt: $attempt");
+                                              //           print(
+                                              //               "isConnected: $isConnected");
+                                              //           print(
+                                              //               "isSubscribe: $isSubscribe");
+                                              //           print(
+                                              //               "isGetData: $isGetData");
+                                              //
+                                              //           await Future.delayed(
+                                              //               Duration(
+                                              //                   seconds: 5));
+                                              //
+                                              //           await getConnection();
+                                              //
+                                              //           attempt++;
+                                              //           print(
+                                              //               "Current isConnected: $isConnected");
+                                              //           print(
+                                              //               "Current isSubscribe: $isSubscribe");
+                                              //         }
+                                              //
+                                              //         print(
+                                              //             "Connection successful after $attempt attempts.");
+                                              //       },
+                                              //
+                                              //       // onTap: () async {
+                                              //       //   var count = 0;
+                                              //       //   while (!isConnected) {
+                                              //       //     print(
+                                              //       //         "isConnected:-${isConnected}");
+                                              //       //     print(
+                                              //       //         "isSubscribe:-${isSubscribe}");
+                                              //       //     print(
+                                              //       //         "isGetData:-${isGetData}");
+                                              //       //
+                                              //       //     await Future.delayed(
+                                              //       //         Duration(
+                                              //       //             seconds: 5));
+                                              //       //
+                                              //       //     // GetData();
+                                              //       //     GetConnection();
+                                              //       //     count++;
+                                              //       //     print(
+                                              //       //         "while Count:-${count}");
+                                              //       //     print(
+                                              //       //         "while isConnected :-${isConnected}");
+                                              //       //     print(
+                                              //       //         "while isSubscribe:-${isSubscribe}");
+                                              //       //   }
+                                              //       // },
+                                              //       child: Column(
+                                              //         children: [
+                                              //           CircleAvatar(
+                                              //             child: Image.asset(
+                                              //               "assets/images/ListIcons/autobooking.png",
+                                              //               width: 10,
+                                              //               color: Colors.white,
+                                              //               fit:
+                                              //                   BoxFit.fitWidth,
+                                              //             ),
+                                              //             backgroundColor:
+                                              //                 Color(0xF2A4386B),
+                                              //             radius: 20,
+                                              //           ),
+                                              //           Text(
+                                              //             _scanResults[0]
+                                              //                 .device
+                                              //                 .platformName, // Accessing item name
+                                              //             style: TextStyle(
+                                              //               fontFamily:
+                                              //                   'Cerapro',
+                                              //               fontSize: 11,
+                                              //               fontWeight:
+                                              //                   FontWeight.w400,
+                                              //               color: Colors.black,
+                                              //             ),
+                                              //           ),
+                                              //         ],
+                                              //       ),
+                                              //     ),
+                                              //   ),
                                               if (_scanResults.length > 1)
                                                 Positioned(
                                                   right: centerX,
@@ -877,33 +849,37 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                                                             .createBond(); // If this completes without exception, assume success
                                                         Fluttertoast.showToast(
                                                           msg:
-                                                          'Device bonded successfully!',
+                                                              'Device bonded successfully!',
                                                           toastLength:
-                                                          Toast.LENGTH_LONG,
+                                                              Toast.LENGTH_LONG,
                                                           gravity: ToastGravity
                                                               .BOTTOM,
                                                           backgroundColor:
-                                                          Colors.green,
+                                                              Colors.green,
                                                           textColor:
-                                                          Colors.white,
+                                                              Colors.white,
                                                           fontSize: 16.0,
                                                         );
                                                       } catch (e) {
                                                         Fluttertoast.showToast(
                                                           msg:
-                                                          'Failed to bond the device: ${e.toString()}',
+                                                              'Failed to bond the device: ${e.toString()}',
                                                           toastLength: Toast
                                                               .LENGTH_SHORT,
                                                           gravity: ToastGravity
                                                               .BOTTOM,
                                                           backgroundColor:
-                                                          Colors.red,
+                                                              Colors.red,
                                                           textColor:
-                                                          Colors.white,
+                                                              Colors.white,
                                                           fontSize: 16.0,
                                                         );
                                                       }
-                                                      showCustomDialog(context);
+                                                      showCustomDialog(context,
+                                                          () {
+                                                        print(
+                                                            "Dialog was closed, perform any action here.");
+                                                      });
                                                     },
                                                     child: Column(
                                                       children: [
@@ -913,22 +889,22 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                                                             width: 10,
                                                             color: Colors.white,
                                                             fit:
-                                                            BoxFit.fitWidth,
+                                                                BoxFit.fitWidth,
                                                           ),
                                                           backgroundColor:
-                                                          Color(0xF2A4386B),
+                                                              const Color(0xF2A4386B),
                                                           radius: 20,
                                                         ),
                                                         Text(
                                                           _scanResults[1]
                                                               .device
                                                               .platformName, // Accessing item name
-                                                          style: TextStyle(
+                                                          style: const TextStyle(
                                                             fontFamily:
-                                                            'Cerapro',
+                                                                'Cerapro',
                                                             fontSize: 11,
                                                             fontWeight:
-                                                            FontWeight.w400,
+                                                                FontWeight.w400,
                                                             color: Colors.black,
                                                           ),
                                                         ),
@@ -942,7 +918,11 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                                                   bottom: centerY,
                                                   child: InkWell(
                                                     onTap: () {
-                                                      showCustomDialog(context);
+                                                      showCustomDialog(context,
+                                                          () {
+                                                        print(
+                                                            "Dialog was closed, perform any action here.");
+                                                      });
                                                     },
                                                     child: Column(
                                                       children: [
@@ -952,22 +932,22 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                                                             width: 10,
                                                             color: Colors.white,
                                                             fit:
-                                                            BoxFit.fitWidth,
+                                                                BoxFit.fitWidth,
                                                           ),
                                                           backgroundColor:
-                                                          Color(0xF2A4386B),
+                                                              const Color(0xF2A4386B),
                                                           radius: 20,
                                                         ),
                                                         Text(
                                                           _scanResults[2]
                                                               .device
                                                               .platformName, // Accessing item name
-                                                          style: TextStyle(
+                                                          style: const TextStyle(
                                                             fontFamily:
-                                                            'Cerapro',
+                                                                'Cerapro',
                                                             fontSize: 11,
                                                             fontWeight:
-                                                            FontWeight.w400,
+                                                                FontWeight.w400,
                                                             color: Colors.black,
                                                           ),
                                                         ),
@@ -984,7 +964,7 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                                 ),
                               ),
                               FutureBuilder(
-                                future: Future.delayed(Duration(seconds: 3)),
+                                future: Future.delayed(const Duration(seconds: 3)),
                                 builder: (BuildContext context,
                                     AsyncSnapshot snapshot) {
                                   if (snapshot.connectionState ==
@@ -1000,26 +980,26 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                                       ),
                                     );
                                   }
-                                  return  isLoading
+                                  return isLoading
                                       ? Center(
-                                    child: LoadingAnimationWidget
-                                        .staggeredDotsWave(
-                                      size: 80,
-                                      color:
-                                      AppStyles.cutstomIconColor,
-                                    ),
-                                  ):Container(
-                                    child: Center(
-                                      child: Text(
-                                        "Device found. Please tap to add the device",
-                                        textAlign: TextAlign.center,
-                                        style: AppStyles.customTextStyle(
-                                          fontSize: 14.0,
-                                          fontWeight: FontWeight.w400,
-                                        ), // Style for the text
-                                      ),
-                                    ),
-                                  );
+                                          child: LoadingAnimationWidget
+                                              .staggeredDotsWave(
+                                            size: 80,
+                                            color: AppStyles.cutstomIconColor,
+                                          ),
+                                        )
+                                      : Container(
+                                          child: Center(
+                                            child: Text(
+                                              "Device found. Please tap to add the device",
+                                              textAlign: TextAlign.center,
+                                              style: AppStyles.customTextStyle(
+                                                fontSize: 14.0,
+                                                fontWeight: FontWeight.w400,
+                                              ), // Style for the text
+                                            ),
+                                          ),
+                                        );
                                   //   ElevatedButton(
                                   //   style: ElevatedButton.styleFrom(
                                   //     backgroundColor: const Color(0xFFFA7365),
@@ -1059,7 +1039,7 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
     );
   }
 
-  void showCustomDialog(BuildContext context) {
+  void showCustomDialog(BuildContext context, VoidCallback onClose) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1068,7 +1048,7 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
             borderRadius: BorderRadius.circular(20),
           ),
           child: Container(
-            padding: EdgeInsets.all(20),
+            padding: const EdgeInsets.all(20),
             height: 350,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
@@ -1082,7 +1062,7 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                   },
                   child: Container(
                     width: double.infinity,
-                    child: Align(
+                    child: const Align(
                       alignment: Alignment.centerRight,
                       child: Icon(
                         Icons.cancel,
@@ -1098,7 +1078,7 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                   width: 100,
                   height: 100,
                 ),
-                SizedBox(height: 20),
+                const SizedBox(height: 20),
                 // Name
                 Center(
                   child: Text(
@@ -1114,23 +1094,19 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
                         fontSize: 24.0, fontWeight: FontWeight.w700),
                   ),
                 ),
-                SizedBox(height: 20),
+                const SizedBox(height: 20),
                 // Done Button
                 SizedBox(
                   width: 250,
                   child: ElevatedButton(
                     onPressed: () async {
-                      // Navigator.of(context).pop();
-                      // await Future.delayed(Duration(seconds: 3));
-                      Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) =>
-                              const FullOtherInformation()));
+                      // _lastValueSubscription.cancel();
+                      Navigator.of(context).pop();
+                      onClose();
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
-                      AppStyles.cutstomIconColor, // Button background color
+                          AppStyles.cutstomIconColor, // Button background color
                       foregroundColor: Colors.white, // Button text color
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12), // Curved edges
@@ -1161,4 +1137,66 @@ class Item {
   final double distance;
 
   Item({required this.name, required this.distance});
+}
+
+class ConnectionAvatar extends StatefulWidget {
+  final String deviceName;
+  final Future<void> Function() onConnect;
+
+  const ConnectionAvatar({
+    Key? key,
+    required this.deviceName,
+    required this.onConnect,
+  }) : super(key: key);
+
+  @override
+  _ConnectionAvatarState createState() => _ConnectionAvatarState();
+}
+
+class _ConnectionAvatarState extends State<ConnectionAvatar> {
+  bool isConnecting = false;
+
+  Future<void> connectDevice() async {
+    setState(() {
+      isConnecting = true; // Start loading
+    });
+    await widget.onConnect(); // Call the connect function
+    setState(() {
+      isConnecting = false; // Stop loading
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: connectDevice,
+      child: Column(
+        children: [
+          CircleAvatar(
+            child: isConnecting
+                ? const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  )
+                : Image.asset(
+                    "assets/images/ListIcons/autobooking.png",
+                    width: 10,
+                    color: Colors.white,
+                    fit: BoxFit.fitWidth,
+                  ),
+            backgroundColor: const Color(0xF2A4386B),
+            radius: 20,
+          ),
+          Text(
+            widget.deviceName, // Accessing item name
+            style: const TextStyle(
+              fontFamily: 'Cerapro',
+              fontSize: 11,
+              fontWeight: FontWeight.w400,
+              color: Colors.black,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

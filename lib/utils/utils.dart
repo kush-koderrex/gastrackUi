@@ -7,7 +7,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:gas_track_ui/utils/snackbar.dart';
 import 'package:gas_track_ui/utils/widgets.dart';
+import 'dart:developer' as developer;
 
 
 import 'app_colors.dart';
@@ -66,6 +68,113 @@ class Utils {
   static String serviceUUID = "9999";
   static String writeCharacteristicUUID = "9191";
   static String readCharacteristicUUID = "8888";
+
+  static String DeviiceName = "";
+
+  static String cusUuid = "";
+
+  static Future<void> onSubscribePressed(BluetoothCharacteristic characteristic) async {
+    try {
+      String op = characteristic.isNotifying == false ? "Subscribe" : "Unsubscribe";
+      print("setNotifyValue operation: $op");
+      print("Is notifying: ${characteristic.isNotifying}");
+
+      // Toggle the notification state
+      await characteristic.setNotifyValue(characteristic.isNotifying == false);
+      Snackbar.show(ABC.c, "$op : Success", success: true);
+      developer.log("Subscribed to Service: ${characteristic}");
+
+      // Check if the characteristic supports read and perform read
+      if (characteristic.properties.read) {
+        print("Descriptors: ${characteristic.descriptors.first}");
+        await characteristic.read();
+      } else {
+        developer.log("This characteristic does not support READ.");
+      }
+
+      // Check if the characteristic supports notifications
+      if (characteristic.properties.notify) {
+        await characteristic.setNotifyValue(true); // Enable notifications
+      } else {
+        developer.log("This characteristic does not support NOTIFY.");
+      }
+
+    } catch (e) {
+      Snackbar.show(ABC.c, prettyException("Subscribe Error:", e), success: false);
+    }
+  }
+
+  static Future<void> subscribeToCharacteristic(
+      BluetoothCharacteristic characteristic) async {
+    try {
+      if (characteristic.properties.notify) {
+        await characteristic.setNotifyValue(true); // Enable notifications
+      } else {
+        developer.log("ERROR: This characteristic does not support NOTIFY.");
+      }
+    } catch (e) {
+      developer.log("Failed to subscribe to characteristic: $e", error: e);
+      await Future.delayed(const Duration(seconds: 1));
+      await characteristic.setNotifyValue(true);
+    }
+  }
+
+
+  // Function to handle Bluetooth write operation (General Request)
+  static Future<void> onWritePressedgenreq(BluetoothCharacteristic characteristic) async {
+    try {
+      // Write a general request to the characteristic
+      List<int> requestData = [0x40, 0xA8, 0x00, 0x01, 0x01, 0x01, 0xAA, 0x55];
+      await characteristic.write(
+        requestData,
+        withoutResponse: characteristic.properties.writeWithoutResponse,
+        allowLongWrite: true,
+      );
+
+      // Show success Snackbar
+      Snackbar.show(ABC.c, "Write: Success", success: true);
+      print("General Request Sent: ${characteristic}");
+
+      // Optionally read the characteristic after writing if supported
+      if (characteristic.properties.read) {
+        await characteristic.read();
+      }
+
+    } catch (e) {
+      // Handle errors and show error Snackbar
+      Snackbar.show(ABC.c, prettyException("Write Error:", e), success: false);
+    }
+  }
+
+  // Function to handle Bluetooth read operation
+  static Future<void> onReadPressed(BluetoothCharacteristic characteristic) async {
+    try {
+      // Read from the Bluetooth characteristic
+      await characteristic.read();
+      Snackbar.show(ABC.c, "Read: Success", success: true);
+      print("Start Reading");
+
+    } catch (e) {
+      // Handle errors and show error Snackbar
+      Snackbar.show(ABC.c, prettyException("Read Error:", e), success: false);
+      print("Read Error: $e");
+    }
+  }
+
+  static double emptyWeight = 14.8; // Empty weight of the cylinder
+  static double fullWeight = 29.0; // Full weight of the cylinder
+
+
+  // Function to calculate the gas percentage based on current weight
+  static double calculateGasPercentage(double currentWeight) {
+
+    if (currentWeight < emptyWeight) {
+      return 0.0; // Prevent negative percentages if weight is below empty
+    }
+    return ((currentWeight - emptyWeight) / (fullWeight - emptyWeight)) * 100;
+  }
+
+
 
   // static String serviceUUID = "f000c0c0-0451-4000-b000-000000000000";
   // static String writeCharacteristicUUID = "f000c0c1-0451-4000-b000-000000000000";

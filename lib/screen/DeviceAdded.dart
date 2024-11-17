@@ -1,9 +1,16 @@
+import 'dart:async';
+
 import 'package:easy_stepper/easy_stepper.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gas_track_ui/screen/HomeScreen.dart';
+import 'package:gas_track_ui/screen/QrScannerScreen.dart';
 import 'package:gas_track_ui/utils/app_colors.dart';
+import 'package:gas_track_ui/utils/extra.dart';
+import 'package:gas_track_ui/utils/snackbar.dart';
 import 'package:gas_track_ui/utils/utils.dart';
-
+import 'dart:developer' as developer;
 
 class DeviceaddedScreen extends StatefulWidget {
   const DeviceaddedScreen({super.key});
@@ -13,22 +20,288 @@ class DeviceaddedScreen extends StatefulWidget {
 }
 
 class _DeviceaddedScreenState extends State<DeviceaddedScreen> {
+
+  int activeStep = 2;
+  List<ScanResult> _scanResults = [];
+  List<BluetoothService> _services = [];
+  List<BluetoothCharacteristic> _characteristic = [];
+  late StreamSubscription<List<int>> _lastValueSubscription;
+  List<int> _value = [];
+  DeviceResponse? _deviceResponse;
+
+  bool isConnected = false;
+  bool isSubscribe = false;
+  bool isGetData = false;
+
+  bool isLoading = false;
+  DeviceResponse? parseDeviceResponse(String response) {
+    // Ensure the response is in uppercase
+    response = response.toUpperCase();
+
+    // Expected response length is 24 hex digits
+    if (response.length != 24) {
+      // print('Invalid response length: ${response.length}');
+      return null;
+    }
+
+    try {
+      // Parsing the response
+      String deviceId = response.substring(0, 6); // 3 bytes -> 6 hex digits
+      String reqCode = response.substring(6, 8); // 1 byte -> 2 hex digits
+      String dataLength = response.substring(8, 10); // 1 byte -> 2 hex digits
+
+      String beforeDecimal = response.substring(10, 12);
+      String afterDecimal = response.substring(12, 14);
+      String battery = response.substring(14, 16);
+      bool buzzer = response.substring(16, 18) == '00';
+      bool critical = response.substring(18, 20) == '00';
+      String checksum = response.substring(20, 24); // 2 bytes -> 4 hex digits
+
+      return DeviceResponse(
+        deviceId: deviceId,
+        reqCode: reqCode,
+        dataLength: dataLength,
+        beforeDecimal: beforeDecimal,
+        afterDecimal: afterDecimal,
+        battery: battery,
+        buzzer: buzzer,
+        critical: critical,
+        checksum: checksum,
+      );
+    } catch (e) {
+      print('Error parsing response: $e');
+      return null;
+    }
+  }
+
+  // Future GetData() async {
+  //   print("Searched Device");
+  //   // Utils.device = _scanResults[0].device;
+  //   developer.log("Scan Results:-${Utils.device.toString()}");
+  //   developer.log("Scan Results:-${Utils.device.runtimeType.toString()}");
+  //   developer.log("Scan Results array:-${_scanResults.toString()}");
+  //   developer.log("Scan length:-${_scanResults.length.toString()}");
+  //   print(Utils.device);
+  //   print(Utils.device.toString());
+  //   print(Utils.device.connect());
+  //   print(Utils.device.connectAndUpdateStream());
+  //   Utils.device.connectAndUpdateStream().catchError((e) {
+  //     Snackbar.show(ABC.c, prettyException("Connect Error:", e),
+  //         success: false);
+  //   });
+  //   print("isConnected:- ${Utils.device.isConnected}");
+  //   if (Utils.device.isConnected == true) {
+  //     _services = await Utils.device.discoverServices();
+  //     print("_servicestest");
+  //     developer.log(_services.toString());
+  //
+  //     for (var service in _services) {
+  //       // Loop through each characteristic in the service
+  //       for (var characteristic in service.characteristics) {
+  //         // Check if the characteristic UUID matches the writeCharacteristicUUID
+  //         if (characteristic.uuid.toString() ==
+  //             Utils.writeCharacteristicUUID) {
+  //           Utils.Writecharacteristic = characteristic;
+  //         }
+  //         // Check if the characteristic UUID matches the readCharacteristicUUID
+  //         else if (characteristic.uuid.toString() ==
+  //             Utils.readCharacteristicUUID) {
+  //           Utils.Readcharacteristic = characteristic;
+  //         }
+  //       }
+  //     }
+  //     developer.log(
+  //         "Readcharacteristic:-${Utils.Readcharacteristic.characteristicUuid.toString()}");
+  //
+  //     // developer.log("Writecharacteristic:-${Writecharacteristic.toString()}");
+  //     developer.log(
+  //         "Writecharacteristic:-${Utils.Writecharacteristic.characteristicUuid.toString()}");
+  //
+  //     for (var service in _services) {
+  //       // Loop through each characteristic in the service
+  //       for (var characteristic in service.characteristics) {
+  //         // Add each characteristic to the _characteristic list
+  //         _characteristic.add(characteristic);
+  //       }
+  //     }
+  //     // print("_characteristic-------------------------->");
+  //     developer.log("_characteristic--->" + _characteristic.toString());
+  //     print("_characteristic length ->${_characteristic.length}");
+  //
+  //     Utils.onSubscribePressed(Utils.Readcharacteristic);
+  //     Utils.subscribeToCharacteristic(Utils.Readcharacteristic);
+  //
+  //     print("Remote:-${Utils.Writecharacteristic.remoteId}");
+  //     print("serviceUuid:-${Utils.Writecharacteristic.serviceUuid}");
+  //     print(
+  //         "characteristicUuid:-${Utils.Writecharacteristic.characteristicUuid}");
+  //     print(
+  //         "secondaryServiceUuid:-${Utils.Writecharacteristic.secondaryServiceUuid}");
+  //
+  //     // onSubscribePressed(Utils.Readcharacteristic);
+  //     // print("Read---->Read---->");
+  //     print("Read From:-${Utils.Readcharacteristic.characteristicUuid}");
+  //     print("Is Subscribed:-${Utils.Readcharacteristic.isNotifying}");
+  //
+  //     if (Utils.Readcharacteristic.isNotifying == true) {
+  //       Utils.onWritePressedgenreq(Utils.Writecharacteristic);
+  //       // print(_characteristic[_characteristic.length-2].characteristicUuid);
+  //       Utils.onReadPressed(Utils.Readcharacteristic);
+  //       _lastValueSubscription =
+  //           Utils.Readcharacteristic.lastValueStream.listen((value) {
+  //         _value = value;
+  //       });
+  //
+  //       String data = _value.toString();
+  //       // print("Data:-${data}");
+  //       print("RecData:-${data}");
+  //
+  //       if (_value.isNotEmpty) {
+  //         List<String> hexList = _value
+  //             .map((decimal) => decimal.toRadixString(16).padLeft(2, '0'))
+  //             .toList();
+  //         String hexString = hexList.join('');
+  //         print("When Data is not null:-${data}");
+  //         print("hexString:-${hexString}");
+  //
+  //         _deviceResponse = parseDeviceResponse(hexString);
+  //
+  //         // print(_deviceResponse?.battery.toString());
+  //         // setState(() {
+  //         Utils.battery = "${_deviceResponse?.battery.toString()}";
+  //         Utils.weight =
+  //             "${_deviceResponse?.beforeDecimal}.${_deviceResponse?.afterDecimal}";
+  //         Utils.remainGas =
+  //             Utils.calculateGasPercentage(double.parse(Utils.weight))
+  //                 .toStringAsFixed(0);
+  //         // });
+  //         print("battery:-${_deviceResponse?.battery.toString()}");
+  //         print(
+  //             "weight:-${_deviceResponse?.beforeDecimal}.${_deviceResponse?.afterDecimal}");
+  //
+  //         // Fluttertoast.showToast(
+  //         //   msg: 'Device Connect successfully!',
+  //         //   toastLength: Toast.LENGTH_LONG,
+  //         //   gravity: ToastGravity.BOTTOM,
+  //         //   backgroundColor: Colors.black,
+  //         //   textColor: Colors.white,
+  //         //   fontSize: 16.0,
+  //         // );
+  //         setState(() {
+  //           isLoading = false;
+  //         });
+  //         Future.delayed(Duration(seconds: 1), () {
+  //           _lastValueSubscription.cancel();
+  //           Navigator.pushReplacement(
+  //             context,
+  //             MaterialPageRoute(
+  //               builder: (context) => Homescreen(),
+  //             ),
+  //           );
+  //
+  //           // showCustomDialog(context);
+  //         });
+  //
+  //
+  //
+  //         isGetData = true;
+  //       }
+  //       isSubscribe = true;
+  //     }
+  //     isConnected = true;
+  //   }
+  // }
+
+
+  void processReceivedData() {
+    final hexString = _value.map((decimal) => decimal.toRadixString(16).padLeft(2, '0')).join('');
+    _deviceResponse = parseDeviceResponse(hexString);
+
+    if (_deviceResponse != null) {
+      Utils.battery = _deviceResponse!.battery;
+      Utils.weight = "${_deviceResponse!.beforeDecimal}.${_deviceResponse!.afterDecimal}";
+      Utils.remainGas = Utils.calculateGasPercentage(double.parse(Utils.weight)).toStringAsFixed(0);
+      print("Data updated: battery=${Utils.battery}, weight=${Utils.weight}, gas=${Utils.remainGas}");
+
+      setState(() {
+        isLoading = false;
+        isGetData = true;
+      });
+
+      _lastValueSubscription.cancel();
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Homescreen()));
+    }
+  }
+
+  Future<void> GetData() async {
+    if (isConnected) return;
+
+    try {
+      print("Connecting to device...");
+      await Utils.device.connectAndUpdateStream().catchError((e) {
+        Snackbar.show(ABC.c, prettyException("Connect Error:", e), success: false);
+      });
+
+      if (Utils.device.isConnected) {
+        print("Device connected");
+        isConnected = true;
+
+        _services = await Utils.device.discoverServices();
+        for (var service in _services) {
+          for (var characteristic in service.characteristics) {
+            final uuid = characteristic.uuid.toString();
+            if (uuid == Utils.writeCharacteristicUUID) {
+              Utils.Writecharacteristic = characteristic;
+            } else if (uuid == Utils.readCharacteristicUUID) {
+              Utils.Readcharacteristic = characteristic;
+            }
+          }
+        }
+
+        if (Utils.Readcharacteristic.isNotifying == false) {
+          await Utils.subscribeToCharacteristic(Utils.Readcharacteristic);
+          isSubscribe = true;
+        }
+
+        if (isSubscribe) {
+          await Utils.onWritePressedgenreq(Utils.Writecharacteristic);
+          _lastValueSubscription = Utils.Readcharacteristic.lastValueStream.listen((value) {
+            if (value.isNotEmpty) {
+              _value = value;
+              processReceivedData();
+            }
+          });
+        }
+      }
+    } catch (e) {
+      print("GetData error: $e");
+    }
+  }
+
+
+  @override
+  void dispose() {
+    _lastValueSubscription.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     var height = MediaQuery.of(context).size.height;
     var width = MediaQuery.of(context).size.width;
-    int activeStep = 2;
-
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Complete Setup",style: AppStyles.appBarTextStyle,),
+        title: Text(
+          "Complete Setup",
+          style: AppStyles.appBarTextStyle,
+        ),
 
         backgroundColor: Colors.transparent, // Makes the background transparent
         elevation: 0, // Removes the shadow below the AppBar
         centerTitle: true, // Optional: centers the title
         iconTheme:
-        IconThemeData(color: Colors.white), // Makes the back arrow white
+            IconThemeData(color: Colors.white), // Makes the back arrow white
         titleTextStyle: TextStyle(color: Colors.white, fontSize: 20),
       ),
       extendBodyBehindAppBar: true, // Ensures the body goes behind the AppBar
@@ -37,7 +310,7 @@ class _DeviceaddedScreenState extends State<DeviceaddedScreen> {
           // Gradient with Custom Clip Path at the top of the screen
           ClipPath(
             clipper:
-            TopRoundedRectangleClipper(), // Custom clipper for the top curve
+                TopRoundedRectangleClipper(), // Custom clipper for the top curve
             child: Container(
               height: height * 0.30, // Adjust height of the effect
               decoration: const BoxDecoration(
@@ -88,7 +361,8 @@ class _DeviceaddedScreenState extends State<DeviceaddedScreen> {
                                 children: [
                                   EasyStepper(
                                     activeStepIconColor: Colors.white,
-                                    activeStepBackgroundColor: AppStyles.cutstomIconColor,
+                                    activeStepBackgroundColor:
+                                        AppStyles.cutstomIconColor,
                                     activeStep: activeStep,
                                     lineStyle: const LineStyle(
                                       lineLength: 80,
@@ -129,27 +403,31 @@ class _DeviceaddedScreenState extends State<DeviceaddedScreen> {
                                   const SizedBox(
                                     height: 20,
                                   ),
-                                   Text(
+                                  Text(
                                     'Device added Successfully',
-                                    style: AppStyles.customTextStyle(fontSize: 22.0, fontWeight: FontWeight.w700),
+                                    style: AppStyles.customTextStyle(
+                                        fontSize: 22.0,
+                                        fontWeight: FontWeight.w700),
                                   ),
                                   const SizedBox(
                                     height: 20,
                                   ),
-                                   Text(
-                                      'Please proceed and place your gas',style: AppStyles.customTextStyle(fontSize: 15.0, fontWeight: FontWeight.w500)),
+                                  Text('Please proceed and place your gas',
+                                      style: AppStyles.customTextStyle(
+                                          fontSize: 15.0,
+                                          fontWeight: FontWeight.w500)),
                                   const SizedBox(
                                     height: 20,
                                   ),
-                                   Text(
-                                      'cylinder on the device',style: AppStyles.customTextStyle(fontSize: 15.0, fontWeight: FontWeight.w500)),
+                                  Text('cylinder on the device',
+                                      style: AppStyles.customTextStyle(
+                                          fontSize: 15.0,
+                                          fontWeight: FontWeight.w500)),
                                 ],
                               ),
                               const SizedBox(
                                 height: 10,
                               ),
-
-
                               Stack(
                                 alignment: Alignment
                                     .topCenter, // Aligns children in the center of the stack
@@ -157,7 +435,7 @@ class _DeviceaddedScreenState extends State<DeviceaddedScreen> {
                                   Image.asset(
                                     "assets/images/Splashscreen/building.png",
                                     width: width,
-                                    height: height/3.5,
+                                    height: height / 3.5,
                                     color: Colors.grey,
                                     fit: BoxFit.fitWidth,
                                   ),
@@ -166,20 +444,46 @@ class _DeviceaddedScreenState extends State<DeviceaddedScreen> {
                                     child: SizedBox(
                                       width: 350,
                                       child: ElevatedButton(
-                                        onPressed: () {
+                                        onPressed: () async {
+                                          setState(() {
+                                            isLoading = true;
+                                          });
+                                          var attempt = 0;
+                                          while (!isConnected ||
+                                              !isSubscribe ||
+                                              !isGetData) {
+                                            print("Attempt: $attempt");
+                                            print("isConnected: $isConnected");
+                                            print("isSubscribe: $isSubscribe");
+                                            print("isGetData: $isGetData");
+                                            await Future.delayed(
+                                                const Duration(seconds: 5));
+
+                                            GetData();
+
+                                            attempt++;
+                                            if (attempt >= 5) {
+                                              // Show the pop-up and reset or stop further attempts
+                                              setState(() {
+                                                isLoading = false;
+                                              });
+                                              _showErrorPopup(context);
+                                              return;
+                                            }
+                                            print(
+                                                "Current isConnected: $isConnected");
+                                            print(
+                                                "Current isSubscribe: $isSubscribe");
+                                          }
                                           // if (Form.of(context)?.validate() ?? false) {
-                                          Navigator.pushReplacement(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => Homescreen(),
-                                            ),
-                                          );
+
                                           // }
                                         },
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: AppStyles.cutstomIconColor, // Button background color
+                                          backgroundColor: AppStyles
+                                              .cutstomIconColor, // Button background color
                                           foregroundColor:
-                                          Colors.white, // Button text color
+                                              Colors.white, // Button text color
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(
                                                 12), // Curved edges
@@ -187,13 +491,22 @@ class _DeviceaddedScreenState extends State<DeviceaddedScreen> {
                                           minimumSize: const Size(200, 50),
                                           padding: const EdgeInsets.symmetric(
                                               horizontal: 30,
-                                              vertical: 15), // Adjust button size
+                                              vertical:
+                                                  15), // Adjust button size
                                           elevation: 5, // Elevation (shadow)
                                         ),
-                                        child:  Text(
-                                          'Continue',
-                                          style: AppStyles.customTextStyle(fontSize: 15.0, fontWeight: FontWeight.w500),
-                                        ),
+                                        child: isLoading
+                                            ? CircularProgressIndicator(
+                                                color: Colors.white,
+                                              )
+                                            : Text(
+                                                'Continue',
+                                                style:
+                                                    AppStyles.customTextStyle(
+                                                        fontSize: 15.0,
+                                                        fontWeight:
+                                                            FontWeight.w500),
+                                              ),
                                       ),
                                     ),
                                   ),
@@ -212,6 +525,26 @@ class _DeviceaddedScreenState extends State<DeviceaddedScreen> {
     );
   }
 }
+void _showErrorPopup(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text("Something Went Wrong"),
+        content: const Text("We couldn't complete the setup. Please try again."),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close the dialog
+            },
+            child: const Text("OK"),
+          ),
+        ],
+      );
+    },
+  );
+}
+
 
 // Custom clipper for creating a curved top
 class TopRoundedRectangleClipper extends CustomClipper<Path> {

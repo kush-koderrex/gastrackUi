@@ -7,6 +7,8 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:gas_track_ui/permissions/bluetooth_off_screen.dart';
 import 'package:gas_track_ui/screen/AddManuallyDevice.dart';
 import 'package:gas_track_ui/screen/AddYouDevice.dart';
+import 'package:gas_track_ui/screen/CylinderDetailScreen.dart';
+import 'package:gas_track_ui/screen/DeviceAdded.dart';
 
 import 'package:gas_track_ui/screen/FirmwareUpdateScreen.dart';
 import 'package:gas_track_ui/screen/HomeScreen.dart';
@@ -49,6 +51,8 @@ class _MyAppState extends State<MyApp> {
   static const String firmwareUpdateScreen = 'firmwareUpdateScreen';
   static const String addManuallyDeviceScreen = 'addManuallyDeviceScreen';
   static const String addYouDeviceScreen = 'addYouDeviceScreen';
+  static const String deviceaddedScreen = 'deviceaddedScreen';
+  static const String cylinderDetailScreen = 'cylinderDetailScreen';
   // static const String recoverPassScr = 'recoverPassword';
 
   BluetoothAdapterState _adapterState = BluetoothAdapterState.unknown; // Default state
@@ -98,8 +102,10 @@ class _MyAppState extends State<MyApp> {
           firmwareUpdateScreen: (BuildContext context) => const FirmwareUpdateScreen(),
           addManuallyDeviceScreen: (BuildContext context) => const AddManuallyDeviceScreen(),
           addYouDeviceScreen: (BuildContext context) => const AddYouDeviceScreen(),
+          deviceaddedScreen: (BuildContext context) => const DeviceaddedScreen(),
+          cylinderDetailScreen: (BuildContext context) => const CylinderDetailScreen(),
         },
-        initialRoute: addYouDeviceScreen,
+        initialRoute: splashScr,
         navigatorKey: navigatorKey,
         // home: const MyHomePage(title: 'Gas Track'),
         home: screen,

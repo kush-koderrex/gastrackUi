@@ -3,7 +3,7 @@
     "project_number": "22846129147",
     "firebase_url": "https://gastrack-fa2c6-default-rtdb.asia-southeast1.firebasedatabase.app",
     "project_id": "gastrack-fa2c6",
-    "storage_bucket": "gastrack-fa2c6.appspot.com"
+    "storage_bucket": "gastrack-fa2c6.firebasestorage.app"
   },
   "client": [
     {

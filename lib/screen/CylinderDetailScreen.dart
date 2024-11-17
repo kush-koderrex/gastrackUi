@@ -28,6 +28,18 @@ class _CylinderDetailScreenState extends State<CylinderDetailScreen>
     super.dispose();
   }
 
+  Future<void> _fetchInitialData() async {
+    // Add logic to fetch data here, e.g., fetch gas readings.
+    setState(() {
+      // Update state if necessary after fetching data
+    });
+  }
+
+  Future<void> _refreshData() async {
+    // Refresh the data when the user pulls down
+    await _fetchInitialData();
+  }
+
   @override
   Widget build(BuildContext context) {
     var height = MediaQuery.of(context).size.height;
@@ -47,248 +59,309 @@ class _CylinderDetailScreenState extends State<CylinderDetailScreen>
         titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20),
       ),
       extendBodyBehindAppBar: true, // Ensures the body goes behind the AppBar
-      body: SingleChildScrollView(
-        child: Stack(
-          children: [
-            // Gradient with Custom Clip Path at the top of the screen
-            ClipPath(
-              clipper:
-                  TopRoundedRectangleClipper(), // Custom clipper for the top curve
-              child: Container(
-                height: height * 0.30, // Adjust height of the effect
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Color(0xFFFA7365),
-                      Color(0xFF9A4DFF)
-                    ], // Gradient colors
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+      body: RefreshIndicator(
+        onRefresh: _refreshData,
+        child: SingleChildScrollView(
+          child: Stack(
+            children: [
+              // Gradient with Custom Clip Path at the top of the screen
+              ClipPath(
+                clipper:
+                    TopRoundedRectangleClipper(), // Custom clipper for the top curve
+                child: Container(
+                  height: height * 0.30, // Adjust height of the effect
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFFFA7365),
+                        Color(0xFF9A4DFF)
+                      ], // Gradient colors
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            Padding(
-              padding:
-                  EdgeInsets.only(top: height / 9.5), // Adjust for gradient
-              child: Container(
-                height: height,
-                width: width,
-                decoration: BoxDecoration(
-                  color: Colors.white54.withOpacity(0.30),
-                  borderRadius: BorderRadius.circular(45.0),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Container(
-                    width: width,
-                    height: height,
-                    decoration: BoxDecoration(
-                      color: Colors.white54.withOpacity(0.20),
-                      borderRadius: BorderRadius.circular(45.0),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 10.0),
-                      child: Container(
-                        width: width,
-                        height: height,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(45.0),
-                        ),
-                        child: Padding(
-                            padding: const EdgeInsets.only(top: 10.0),
-                            child: Column(
-                              children: <Widget>[
-                                const SizedBox(
-                                  height: 20,
-                                ),
-                                Expanded(
-                                  child: Column(
-                                    children: [
-                                      Card(
-                                        elevation: 2,
-                                        child: Container(
-                                          width: width / 2.5,
-                                          height: height / 10,
-                                          padding: const EdgeInsets.all(
-                                              12), // Padding inside the container
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(
-                                                12), // Rounded edges for the container
-                                          ),
-                                          child: Column(
-                                            mainAxisAlignment: MainAxisAlignment
-                                                .center, // Center contents inside the container
-                                            children: [
-                                              Text(
-                                                "Total Remaining",
-                                                style:
-                                                    AppStyles.customTextStyle(
-                                                        fontSize: 14.0,
-                                                        fontWeight:
-                                                            FontWeight.w400),
-                                              ),
-                                              Text(
-                                                "72 %",
-                                                style:
-                                                    AppStyles.customTextStyle(
-                                                        fontSize: 25.0,
-                                                        fontWeight:
-                                                            FontWeight.w700),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+              Padding(
+                padding:
+                    EdgeInsets.only(top: height / 9.5), // Adjust for gradient
+                child: Container(
+                  height: height,
+                  width: width,
+                  decoration: BoxDecoration(
+                    color: Colors.white54.withOpacity(0.30),
+                    borderRadius: BorderRadius.circular(45.0),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Container(
+                      width: width,
+                      height: height,
+                      decoration: BoxDecoration(
+                        color: Colors.white54.withOpacity(0.20),
+                        borderRadius: BorderRadius.circular(45.0),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 10.0),
+                        child: Container(
+                          width: width,
+                          height: height,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(45.0),
+                          ),
+                          child: Padding(
+                              padding: const EdgeInsets.only(top: 10.0),
+                              child: Column(
+                                children: <Widget>[
+                                  const SizedBox(
+                                    height: 20,
                                   ),
-                                ),
-                                Container(
-                                  height: 400,
-                                  // color: Colors.cyan,
-                                  child: Center(
+                                  Expanded(
                                     child: Column(
-                                      mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                              right: 20.0, left: 20),
+                                        Card(
+                                          elevation: 2,
                                           child: Container(
-                                            height: 50,
+                                            width: width / 2.5,
+                                            height: height / 10,
+                                            padding: const EdgeInsets.all(
+                                                12), // Padding inside the container
                                             decoration: BoxDecoration(
                                               color: Colors.white,
-                                              borderRadius:
-                                                  BorderRadius.circular(15),
-                                              boxShadow: const [
-                                                BoxShadow(
-                                                  color: Colors.black12,
-                                                  spreadRadius: 2,
-                                                  blurRadius: 5,
+                                              borderRadius: BorderRadius.circular(
+                                                  12), // Rounded edges for the container
+                                            ),
+                                            child: Column(
+                                              mainAxisAlignment: MainAxisAlignment
+                                                  .center, // Center contents inside the container
+                                              children: [
+                                                Text(
+                                                  "Total Remaining",
+                                                  style:
+                                                      AppStyles.customTextStyle(
+                                                          fontSize: 14.0,
+                                                          fontWeight:
+                                                              FontWeight.w400),
+                                                ),
+                                                Text(
+                                                  "${Utils.remainGas} %",
+                                                  style:
+                                                      AppStyles.customTextStyle(
+                                                          fontSize: 25.0,
+                                                          fontWeight:
+                                                              FontWeight.w700),
                                                 ),
                                               ],
                                             ),
-                                            child: TabBar(
-                                              dividerHeight:0,
-                                              controller: _tabController,
-                                              onTap: (index) {
-                                                setState(() {
-                                                  _selectedIndex = index;
-                                                });
-                                              },
-                                              indicator: BoxDecoration(
-                                                color: AppStyles.cutstomIconColor,
-                                                borderRadius:
-                                                    BorderRadius.circular(15),
-                                              ),
-                                              labelColor: Colors.white,
-                                              unselectedLabelColor: Colors.white,
-                                              tabs: [
-
-                                                Tab(
-                                                  child: Text(
-                                                    '       Day        ',
-                                                    style: TextStyle(
-                                                        color:
-                                                            _selectedIndex == 0
-                                                                ? Colors.white
-                                                                : Colors.grey),
-                                                  ),
-                                                ),
-                                                Tab(
-                                                  child: Text(
-                                                    '       Week        ',
-                                                    style: TextStyle(
-                                                        color:
-                                                            _selectedIndex == 1
-                                                                ? Colors.white
-                                                                : Colors.grey),
-                                                  ),
-                                                ),
-                                                Tab(
-                                                  child: Text(
-                                                    '       Month        ',
-                                                    style: TextStyle(
-                                                        color:
-                                                            _selectedIndex == 2
-                                                                ? Colors.white
-                                                                : Colors.grey),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(height: 20),
-                                        Expanded(
-                                          child: TabBarView(
-                                            controller: _tabController,
-                                            children: [
-                                              Center(child: Text("Day View")),
-                                              Center(
-                                                child: Container(
-                                                  width: width -
-                                                      20, // Set the width of the container
-                                                  height:
-                                                      300, // Set the height of the container
-                                                  padding:
-                                                      const EdgeInsets.all(8.0),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors
-                                                        .white, // Optional: background color
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            16), // Optional: rounded corners
-                                                    boxShadow: [
-                                                      // BoxShadow(
-                                                      //   color: Colors.grey
-                                                      //       .withOpacity(0.5),
-                                                      //   spreadRadius: 5,
-                                                      //   blurRadius: 7,
-                                                      //   offset: Offset(0,
-                                                      //       3), // Optional: shadow offset
-                                                      // ),
-                                                    ],
-                                                  ),
-                                                  child:
-                                                      const BarChartSample3(), // Call the BarChartSample3 widget here
-                                                ),
-                                              ),
-                                              Center(child: Text("Month View")),
-                                            ],
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                ),
-                                Stack(
-                                  alignment: Alignment
-                                      .topCenter, // Aligns children in the center of the stack
-                                  children: [
-                                    const SizedBox(height: 40),
-                                    // Background image
-                                    Image.asset(
-                                      "assets/images/Splashscreen/building.png",
-                                      width: width,
-                                      color: Colors.grey,
-                                      fit: BoxFit.fitWidth,
-                                    ),
+                                  Container(
+                                    height: 400,
+                                    // color: Colors.cyan,
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                                right: 20.0, left: 20),
+                                            child: Container(
+                                              height: 50,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(15),
+                                                boxShadow: const [
+                                                  BoxShadow(
+                                                    color: Colors.black12,
+                                                    spreadRadius: 2,
+                                                    blurRadius: 5,
+                                                  ),
+                                                ],
+                                              ),
+                                              child: TabBar(
+                                                dividerHeight:0,
+                                                controller: _tabController,
+                                                onTap: (index) {
+                                                  setState(() {
+                                                    _selectedIndex = index;
+                                                  });
+                                                },
+                                                indicator: BoxDecoration(
+                                                  color: AppStyles.cutstomIconColor,
+                                                  borderRadius:
+                                                      BorderRadius.circular(15),
+                                                ),
+                                                labelColor: Colors.white,
+                                                unselectedLabelColor: Colors.white,
+                                                tabs: [
 
-                                    // Centered button
-                                  ],
-                                ),
-                              ],
-                            )),
+                                                  Tab(
+                                                    child: Text(
+                                                      '       Day        ',
+                                                      style: TextStyle(
+                                                          color:
+                                                              _selectedIndex == 0
+                                                                  ? Colors.white
+                                                                  : Colors.grey),
+                                                    ),
+                                                  ),
+                                                  Tab(
+                                                    child: Text(
+                                                      '       Week        ',
+                                                      style: TextStyle(
+                                                          color:
+                                                              _selectedIndex == 1
+                                                                  ? Colors.white
+                                                                  : Colors.grey),
+                                                    ),
+                                                  ),
+                                                  Tab(
+                                                    child: Text(
+                                                      '       Month        ',
+                                                      style: TextStyle(
+                                                          color:
+                                                              _selectedIndex == 2
+                                                                  ? Colors.white
+                                                                  : Colors.grey),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                          SizedBox(height: 20),
+                                          Expanded(
+                                            child: TabBarView(
+                                              controller: _tabController,
+                                              children: [
+                                                Center(
+                                                  child: Container(
+                                                    width: width -
+                                                        20, // Set the width of the container
+                                                    height:
+                                                    300, // Set the height of the container
+                                                    padding:
+                                                    const EdgeInsets.all(8.0),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors
+                                                          .white, // Optional: background color
+                                                      borderRadius:
+                                                      BorderRadius.circular(
+                                                          16), // Optional: rounded corners
+                                                      boxShadow: [
+                                                        // BoxShadow(
+                                                        //   color: Colors.grey
+                                                        //       .withOpacity(0.5),
+                                                        //   spreadRadius: 5,
+                                                        //   blurRadius: 7,
+                                                        //   offset: Offset(0,
+                                                        //       3), // Optional: shadow offset
+                                                        // ),
+                                                      ],
+                                                    ),
+                                                    child:
+                                                     DayGraph(customerId: Utils.cusUuid,), // Call the BarChartSample3 widget here
+                                                  ),
+                                                ),
+                                                Center(
+                                                  child: Container(
+                                                    width: width -
+                                                        20, // Set the width of the container
+                                                    height:
+                                                    300, // Set the height of the container
+                                                    padding:
+                                                    const EdgeInsets.all(8.0),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors
+                                                          .white, // Optional: background color
+                                                      borderRadius:
+                                                      BorderRadius.circular(
+                                                          16), // Optional: rounded corners
+                                                      boxShadow: [
+                                                        // BoxShadow(
+                                                        //   color: Colors.grey
+                                                        //       .withOpacity(0.5),
+                                                        //   spreadRadius: 5,
+                                                        //   blurRadius: 7,
+                                                        //   offset: Offset(0,
+                                                        //       3), // Optional: shadow offset
+                                                        // ),
+                                                      ],
+                                                    ),
+                                                    child:
+                                                     WeeklyGraph(customerId: Utils.cusUuid,), // Call the BarChartSample3 widget here
+                                                  ),
+                                                ),
+                                                // Center(child: Text("Day View")),
+                                                Center(
+                                                  child: Container(
+                                                    width: width -
+                                                        20, // Set the width of the container
+                                                    height:
+                                                        300, // Set the height of the container
+                                                    padding:
+                                                        const EdgeInsets.all(8.0),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors
+                                                          .white, // Optional: background color
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              16), // Optional: rounded corners
+                                                      boxShadow: [
+                                                        // BoxShadow(
+                                                        //   color: Colors.grey
+                                                        //       .withOpacity(0.5),
+                                                        //   spreadRadius: 5,
+                                                        //   blurRadius: 7,
+                                                        //   offset: Offset(0,
+                                                        //       3), // Optional: shadow offset
+                                                        // ),
+                                                      ],
+                                                    ),
+                                                    child:
+                                                         MonthGraph( customerId: Utils.cusUuid,), // Call the BarChartSample3 widget here
+                                                  ),
+                                                ),
+                                                // Center(child: Text("Month View")),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  Stack(
+                                    alignment: Alignment
+                                        .topCenter, // Aligns children in the center of the stack
+                                    children: [
+                                      const SizedBox(height: 40),
+                                      // Background image
+                                      Image.asset(
+                                        "assets/images/Splashscreen/building.png",
+                                        width: width,
+                                        color: Colors.grey,
+                                        fit: BoxFit.fitWidth,
+                                      ),
+
+                                      // Centered button
+                                    ],
+                                  ),
+                                ],
+                              )),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

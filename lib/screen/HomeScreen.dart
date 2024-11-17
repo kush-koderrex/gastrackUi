@@ -1,10 +1,9 @@
 import 'dart:async';
-
-import 'package:easy_stepper/easy_stepper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:gas_track_ui/Services/FirebaseSevice.dart';
 import 'package:gas_track_ui/permissions/bluetooth_off_screen.dart';
 import 'package:gas_track_ui/screen/CylinderDetailScreen.dart';
 import 'package:gas_track_ui/screen/MenuScreen.dart';
@@ -16,7 +15,6 @@ import 'package:gas_track_ui/utils/extra.dart';
 
 import 'package:intl/intl.dart';
 import 'dart:developer' as developer;
-
 
 class DeviceResponse {
   String deviceId;
@@ -88,119 +86,6 @@ class _HomescreenState extends State<Homescreen> {
 
   DeviceResponse? _deviceResponse;
 
-  final double emptyWeight = 14.8; // Empty weight of the cylinder
-  final double fullWeight = 29.0; // Full weight of the cylinder
-  // double gasPercentage = 0.0; // Percentage of gas remaining
-
-  // Function to calculate gas percentage based on current weight
-  double calculateGasPercentage(double currentWeight) {
-    if (currentWeight < emptyWeight) {
-      return 0.0; // Prevent negative percentages if weight is below empty
-    }
-    return ((currentWeight - emptyWeight) / (fullWeight - emptyWeight)) * 100;
-  }
-
-  Future onWritePressedgenreq(BluetoothCharacteristic characteristic) async {
-    try {
-      await characteristic.write(
-          [0x40, 0xA8, 0x00, 0x01, 0x01, 0x01, 0xAA, 0x55],
-          withoutResponse: characteristic.properties.writeWithoutResponse,
-          allowLongWrite: true);
-      // await c.write([0xa, 0x1, 0x2, 0x3c, 0x1, 0x37, 0xaa, 0x37], withoutResponse: c.properties.writeWithoutResponse);
-      Snackbar.show(ABC.c, "Write: Success", success: true);
-      print("General Request Send :-${characteristic}");
-      if (characteristic.properties.read) {
-        await characteristic.read();
-      }
-    } catch (e) {
-      Snackbar.show(ABC.c, prettyException("Write Error:", e), success: false);
-    }
-  }
-
-  // Future onSubscribePressed(BluetoothCharacteristic characteristic) async {
-  //   try {
-  //     String op =
-  //         characteristic.isNotifying == false ? "Subscribe" : "Unubscribe";
-  //     await characteristic.setNotifyValue(characteristic.isNotifying == false);
-  //     Snackbar.show(ABC.c, "$op : Success", success: true);
-  //     if (characteristic.properties.read) {
-  //       await characteristic.read();
-  //     }
-  //     if (mounted) {
-  //       // setState(() {});
-  //     }
-  //   } catch (e) {
-  //     Snackbar.show(ABC.c, prettyException("Subscribe Error:", e),
-  //         success: false);
-  //   }
-  // }
-
-  Future onSubscribePressed(BluetoothCharacteristic characteristic) async {
-    try {
-      String op = characteristic.isNotifying == false ? "Subscribe" : "Unubscribe";
-      print("setNotifyValueop");
-      print(op);
-      print(characteristic.isNotifying == false);
-
-      await characteristic.setNotifyValue(characteristic.isNotifying == false);
-      Snackbar.show(ABC.c, "$op : Success", success: true);
-      developer.log("Subscribed Service:-${characteristic}");
-      if (characteristic.properties.read) {
-        print("Descriter:-${characteristic.descriptors.first}");
-        // await characteristic.read();
-        if (characteristic.properties.read) {
-          await characteristic.read();
-        } else {
-          developer.log("This characteristic does not support READ.");
-        }
-      }
-      if (characteristic.properties.notify) {
-        await characteristic.setNotifyValue(true);  // Enable notifications
-      } else {
-        developer.log("This characteristic does not support NOTIFY.");
-      }
-      if (mounted) {
-        // setState(() {});
-      }
-    } catch (e) {
-      Snackbar.show(ABC.c, prettyException("Subscribe Error:", e),
-          success: false);
-    }
-  }
-
-  Future<void> subscribeToCharacteristic(BluetoothCharacteristic characteristic) async {
-    try {
-      if (characteristic.properties.notify) {
-        await characteristic.setNotifyValue(true);  // Enable notifications
-
-
-        // characteristic.lastValueStream.listen((value) {
-        //   // Process the incoming notification data here
-        //   developer.log("Notification received: $value");
-        //
-        // });
-        //
-        // developer.log("Subscribed to notifications for characteristic ${characteristic.uuid}");
-      } else {
-        developer.log("ERROR: This characteristic does not support NOTIFY.");
-      }
-    } catch (e) {
-      developer.log("Failed to subscribe to characteristic: $e", error: e);
-      await Future.delayed(Duration(seconds: 1));
-      await characteristic.setNotifyValue(true);
-    }
-  }
-
-
-  Future onReadPressed(BluetoothCharacteristic characteristic) async {
-    try {
-      await characteristic.read();
-      Snackbar.show(ABC.c, "Read: Success", success: true);
-    } catch (e) {
-      Snackbar.show(ABC.c, prettyException("Read Error:", e), success: false);
-    }
-  }
-
   // test
 
   bool _isBluetoothEnabled = false; // Blu
@@ -227,6 +112,7 @@ class _HomescreenState extends State<Homescreen> {
   }
 
   late StreamSubscription<List<ScanResult>> _scanResultsSubscription;
+
   @override
   void initState() {
     // TODO: implement initState
@@ -303,32 +189,12 @@ class _HomescreenState extends State<Homescreen> {
       developer.log(
           "Writecharacteristic:-${Utils.Writecharacteristic.characteristicUuid.toString()}");
 
-      // for (var service in _services) {
-      //   // Loop through each characteristic in the service
-      //   for (var characteristic in service.characteristics) {
-      //     // Add each characteristic to the _characteristic list
-      //     _characteristic.add(characteristic);
-      //   }
-      // }
-      // print("_characteristic-------------------------->");
       developer.log("_characteristic--->" + _characteristic.toString());
       print("_characteristic length ->${_characteristic.length}");
 
-      onSubscribePressed(Utils.Readcharacteristic);
-      subscribeToCharacteristic(Utils.Readcharacteristic);
+      Utils.onSubscribePressed(Utils.Readcharacteristic);
+      Utils.subscribeToCharacteristic(Utils.Readcharacteristic);
 
-      // print(_characteristic.length);
-      // print();
-      // onWritePressedgenreq(_characteristic[_characteristic.length - 1]);
-      // print("Remote:-${_characteristic[_characteristic.length - 1].remoteId}");
-      // print("serviceUuid:-${_characteristic[_characteristic.length - 1].serviceUuid}");
-      // print("characteristicUuid:-${_characteristic[_characteristic.length - 1].characteristicUuid}");
-      // print("secondaryServiceUuid:-${_characteristic[_characteristic.length - 1].secondaryServiceUuid}");
-
-      // onSubscribePressed(Utils.Readcharacteristic);
-      // subscribeToCharacteristic(Utils.Readcharacteristic);
-
-      // onWritePressedgenreq(Utils.Writecharacteristic);
       print("Remote:-$Utils.{Writecharacteristic.remoteId}");
       print("serviceUuid:-${Utils.Writecharacteristic.serviceUuid}");
       print(
@@ -336,41 +202,13 @@ class _HomescreenState extends State<Homescreen> {
       print(
           "secondaryServiceUuid:-${Utils.Writecharacteristic.secondaryServiceUuid}");
 
-      // print(_characteristic[
-      //         _characteristic
-      //                 .length -
-      //             1]
-      //     .serviceUuid);
-      // print(_characteristic[
-      //         _characteristic
-      //                 .length -
-      //             1]
-      //     .secondaryServiceUuid);
-      // print(_characteristic[
-      //         _characteristic
-      //                 .length -
-      //             1]
-      //     .characteristicUuid);
-      // onSubscribePressed(_characteristic[_characteristic.length-2]);
-      // // print("Read---->Read---->");
-      // print("Read From:-${_characteristic[_characteristic.length-2].characteristicUuid}");
-      // print("Is Subscribed:-${_characteristic[_characteristic.length-2].isNotifying}");
-      //
-      // if (_characteristic[_characteristic.length-2].isNotifying ==
-      //     true) {
-      //   // print(_characteristic[_characteristic.length-2].characteristicUuid);
-      //   onReadPressed(_characteristic[_characteristic.length-2]);
-      //   _lastValueSubscription = _characteristic[_characteristic.length-2].lastValueStream.listen((value) {
-      //     _value = value;});
-
-      // print("Read---->Read---->");
       print("Read From:-${Utils.Readcharacteristic.characteristicUuid}");
       print("Is Subscribed:-${Utils.Readcharacteristic.isNotifying}");
 
       if (Utils.Readcharacteristic.isNotifying == true) {
-        onWritePressedgenreq(Utils.Writecharacteristic);
+        Utils.onWritePressedgenreq(Utils.Writecharacteristic);
         // print(_characteristic[_characteristic.length-2].characteristicUuid);
-        onReadPressed(Utils.Readcharacteristic);
+        Utils.onReadPressed(Utils.Readcharacteristic);
         _lastValueSubscription =
             Utils.Readcharacteristic.lastValueStream.listen((value) {
           _value = value;
@@ -395,12 +233,25 @@ class _HomescreenState extends State<Homescreen> {
             Utils.battery = "${_deviceResponse?.battery.toString()}";
             Utils.weight =
                 "${_deviceResponse?.beforeDecimal}.${_deviceResponse?.afterDecimal}";
-            Utils.remainGas = calculateGasPercentage(double.parse(Utils.weight))
-                .toStringAsFixed(0);
+            Utils.remainGas =
+                Utils.calculateGasPercentage(double.parse(Utils.weight))
+                    .toStringAsFixed(0);
           });
+
           print("battery:-${_deviceResponse?.battery.toString()}");
+          print("RemainGas:-${Utils.remainGas}");
           print(
               "weight:-${_deviceResponse?.beforeDecimal}.${_deviceResponse?.afterDecimal}");
+
+          await FirestoreService().updateGasReadings(
+            customerId: Utils.cusUuid,  // Use appropriate customer_id
+            remainGas: Utils.remainGas,
+            weight: Utils.weight,
+            battery: Utils.battery,
+            criticalFlag: false,
+            readingDate: DateTime.now(),
+          );
+
 
           Fluttertoast.showToast(
             msg: 'Data Update successfully!',
@@ -517,7 +368,14 @@ class _HomescreenState extends State<Homescreen> {
                           shape: BoxShape.circle,
                         ),
                       )
-                    : SizedBox(),
+                    : Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                ),
                 SizedBox(
                   width: 10,
                 ),
@@ -671,7 +529,7 @@ class _HomescreenState extends State<Homescreen> {
                                                                     width:
                                                                         5), // Space between avatar and text
                                                                 Text(
-                                                                  Utils.battery,
+                                                                  "${Utils.battery}%",
                                                                   style: AppStyles.customTextStyle(
                                                                       fontSize:
                                                                           15.0,
@@ -755,8 +613,8 @@ class _HomescreenState extends State<Homescreen> {
                                                                   // color: Colors.red,
                                                                   width: 40,
                                                                   child: Text(
-                                                                    "${Utils.weight}kg",
-                                                                    maxLines: 2,
+                                                                    "${Utils.weight}",
+                                                                    maxLines: 1,
                                                                     style: AppStyles.customTextStyle(
                                                                         fontSize:
                                                                             15.0,
@@ -979,18 +837,28 @@ class _HomescreenState extends State<Homescreen> {
                                                             width: 40,
                                                           ),
                                                           (isConnected == true)
-                                                              ?
-                                                          Container(
+                                                              ? Container(
+                                                                  width: 8,
+                                                                  height: 8,
+                                                                  decoration:
+                                                                      const BoxDecoration(
+                                                                    color: Colors
+                                                                        .green,
+                                                                    shape: BoxShape
+                                                                        .circle,
+                                                                  ),
+                                                                )
+                                                              : Container(
                                                             width: 8,
                                                             height: 8,
                                                             decoration:
-                                                                const BoxDecoration(
-                                                              color:
-                                                                  Colors.green,
+                                                            const BoxDecoration(
+                                                              color: Colors
+                                                                  .red,
                                                               shape: BoxShape
                                                                   .circle,
                                                             ),
-                                                          ):SizedBox(),
+                                                          ),
                                                         ],
                                                       ),
                                                     ),

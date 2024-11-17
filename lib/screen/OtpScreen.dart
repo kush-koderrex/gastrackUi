@@ -1,10 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:gas_track_ui/Services/FirebaseSevice.dart';
+import 'package:gas_track_ui/Services/LocationService.dart';
 import 'package:gas_track_ui/screen/AddYouDevice.dart';
 import 'package:gas_track_ui/screen/Login_Screen.dart';
 import 'package:gas_track_ui/utils/app_colors.dart';
 import 'package:gas_track_ui/utils/utils.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:pinput/pinput.dart';
 
 class Otpscreen extends StatefulWidget {
@@ -24,44 +28,308 @@ class _OtpscreenState extends State<Otpscreen> {
   final _otpController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   bool isLoading = false;
+  Position? _currentPosition;
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    _getLocation();
+    super.initState();
+  }
 
 
-  Future<void> verifyOtp() async {
+  // Future<void> verifyOtp() async {
+  //   try {
+  //     print(widget.verificationId);
+  //     // Ensure the verificationId is not null
+  //     if (widget.verificationId == null || widget.verificationId!.isEmpty) {
+  //       Fluttertoast.showToast(msg: "Verification ID is missing.");
+  //       return;
+  //     }
+  //
+  //     // Create a PhoneAuthCredential using the verificationId and OTP entered by the user
+  //     PhoneAuthCredential credential = PhoneAuthProvider.credential(
+  //       verificationId: widget.verificationId!,
+  //       smsCode: _otpController.text.trim(), // Use the OTP from the controller, trim whitespace
+  //     );
+  //
+  //     // Sign in with the credential
+  //     await _auth.signInWithCredential(credential);
+  //
+  //     // Navigate to AddYourDeviceScreen on successful verification
+  //     Navigator.pushReplacement(
+  //       context,
+  //       MaterialPageRoute(
+  //         builder: (context) => const AddYouDeviceScreen(),
+  //       ),
+  //     );
+  //   } catch (e) {
+  //     Fluttertoast.showToast(msg: "Invalid OTP: ${e.toString()}");
+  //   }
+  // }
+
+  Future<Map<String, String>> getLocationDetails(
+      double latitude, double longitude) async {
     try {
-      print(widget.verificationId);
-      // Ensure the verificationId is not null
-      if (widget.verificationId == null || widget.verificationId!.isEmpty) {
-        Fluttertoast.showToast(msg: "Verification ID is missing.");
+      List<Placemark> placemarks =
+      await placemarkFromCoordinates(latitude, longitude);
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        return {
+          'country': place.country ?? '',
+          'state': place.administrativeArea ?? '',
+          'city': place.locality ?? '',
+        };
+      } else {
+        return {'country': '', 'state': '', 'city': ''};
+      }
+    } catch (e) {
+      print(e);
+      return {'country': '', 'state': '', 'city': ''};
+    }
+  }
+
+
+  Future<void> _getLocation() async {
+    try {
+      final locationService = LocationService();
+      final position = await locationService.getCurrentLocation();
+
+      if (mounted) {
+        setState(() {
+          _currentPosition = position;
+        });
+        print("Latitude: ${position?.latitude}, Longitude: ${position?.longitude}");
+      }
+    } catch (e) {
+      Fluttertoast.showToast(msg: "Error retrieving location: ${e.toString()}");
+      print("Error retrieving location: $e");
+    }
+  }
+
+
+  // Future<void> _getLocation() async {
+  //   try {
+  //     final locationService = LocationService();
+  //     final position = await locationService.getCurrentLocation();
+  //
+  //     if (mounted) { // Ensure widget is still in the widget tree
+  //       if (position != null) {
+  //         setState(() {
+  //           _currentPosition = position;
+  //         });
+  //         print("Latitude: ${position.latitude}, Longitude: ${position.longitude}");
+  //       } else {
+  //         print("Location permission denied or location unavailable.");
+  //       }
+  //     }
+  //   } catch (e) {
+  //     print("Error retrieving location: $e");
+  //   }
+  // }
+
+  // Future<void> verifyOtp() async {
+  //   Map<String, String> locationDetails = await getLocationDetails(
+  //       _currentPosition!.latitude, _currentPosition!.longitude);
+  //   String country = locationDetails['country'] ?? 'N/A';
+  //   String state = locationDetails['state'] ?? 'N/A';
+  //   String city = locationDetails['city'] ?? 'N/A';
+  //   try {
+  //     setState(() {
+  //       isLoading = true;
+  //     });
+  //
+  //     // Create PhoneAuthCredential
+  //     PhoneAuthCredential credential = PhoneAuthProvider.credential(
+  //       verificationId: widget.verificationId,
+  //       smsCode: _otpController.text.trim(),
+  //     );
+  //
+  //     // Sign in with the credential
+  //     UserCredential userCredential = await _auth.signInWithCredential(credential);
+  //
+  //     // Get user info
+  //     User? user = userCredential.user;
+  //     if (user != null) {
+  //       // Save user data to Firestore
+  //       await FirestoreService().addUser(
+  //         name: user.displayName ?? 'Unknown', // Replace with appropriate value
+  //         email: user.email ?? widget.phoneNumber, // Use phone number if email is null
+  //         profileUrl: user.photoURL ?? '',
+  //         userId: user.uid,
+  //         authType: 'phone',
+  //
+  //         latitude: _currentPosition!.latitude.toString(),
+  //         longitude: _currentPosition!.longitude.toString(),
+  //         city: '$city',
+  //         state: '$state',
+  //         country: "$country",
+  //       );
+  //
+  //       // Navigate to the next screen
+  //       Navigator.pushReplacement(
+  //         context,
+  //         MaterialPageRoute(builder: (context) => const AddYouDeviceScreen()),
+  //       );
+  //     }
+  //   } catch (e) {
+  //     Fluttertoast.showToast(msg: "Invalid OTP: ${e.toString()}");
+  //   } finally {
+  //     setState(() {
+  //       isLoading = false;
+  //     });
+  //   }
+  // }
+  Future<void> verifyOtp() async {
+    print("verifyOtp");
+    if (_currentPosition == null) {
+      await _getLocation(); // Attempt to fetch the location again
+      if (_currentPosition == null) {
+        Fluttertoast.showToast(
+            msg: "Unable to get location. Please ensure location is enabled.");
         return;
       }
+    }
 
-      // Create a PhoneAuthCredential using the verificationId and OTP entered by the user
+    try {
+      // Fetch location details
+      Map<String, String> locationDetails = await getLocationDetails(
+        _currentPosition!.latitude,
+        _currentPosition!.longitude,
+      );
+
+      String country = locationDetails['country'] ?? 'N/A';
+      String state = locationDetails['state'] ?? 'N/A';
+      String city = locationDetails['city'] ?? 'N/A';
+
+
+      print(country);
+      print(state);
+      print(city);
+
+      setState(() {
+        isLoading = true;
+      });
+
+      // Create PhoneAuthCredential
       PhoneAuthCredential credential = PhoneAuthProvider.credential(
-        verificationId: widget.verificationId!,
-        smsCode: _otpController.text.trim(), // Use the OTP from the controller, trim whitespace
+        verificationId: widget.verificationId,
+        smsCode: _otpController.text.trim(),
       );
 
       // Sign in with the credential
-      await _auth.signInWithCredential(credential);
+      UserCredential userCredential = await _auth.signInWithCredential(credential);
 
-      // Navigate to AddYourDeviceScreen on successful verification
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const AddYouDeviceScreen(),
-        ),
-      );
+      // Get user info
+      User? user = userCredential.user;
+      print(user);
+      if (user != null) {
+        // Save user data to Firestore
+        await FirestoreService().addUser(
+          name: user.displayName ?? '',
+          email: user.email ?? "",
+          phone: widget.phoneNumber ?? "",
+          profileUrl: user.photoURL ?? '',
+          userId: user.uid,
+          authType: 'phone',
+          latitude: _currentPosition!.latitude.toString(),
+          longitude: _currentPosition!.longitude.toString(),
+          city: city,
+          state: state,
+          country: country, customer_id: widget.phoneNumber,
+        );
+        print(Utils.cusUuid);
+        Utils.cusUuid =widget.phoneNumber;
+        print(Utils.cusUuid);
+        // Navigate to the next screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const AddYouDeviceScreen()),
+        );
+      } else {
+        Fluttertoast.showToast(msg: "User authentication failed.");
+      }
     } catch (e) {
       Fluttertoast.showToast(msg: "Invalid OTP: ${e.toString()}");
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
   }
+
+
+  // Future<void> verifyOtp() async {
+  //   _getLocation();
+  //   try {
+  //     // Fetch location details
+  //     if (_currentPosition == null) {
+  //       Fluttertoast.showToast(msg: "Unable to get location. Please try again.");
+  //       return;
+  //     }
+  //
+  //     Map<String, String> locationDetails = await getLocationDetails(
+  //       _currentPosition!.latitude,
+  //       _currentPosition!.longitude,
+  //     );
+  //
+  //     String country = locationDetails['country'] ?? 'N/A';
+  //     String state = locationDetails['state'] ?? 'N/A';
+  //     String city = locationDetails['city'] ?? 'N/A';
+  //
+  //     setState(() {
+  //       isLoading = true;
+  //     });
+  //
+  //     // Create PhoneAuthCredential
+  //     PhoneAuthCredential credential = PhoneAuthProvider.credential(
+  //       verificationId: widget.verificationId,
+  //       smsCode: _otpController.text.trim(),
+  //     );
+  //
+  //     // Sign in with the credential
+  //     UserCredential userCredential = await _auth.signInWithCredential(credential);
+  //
+  //     // Get user info
+  //     User? user = userCredential.user;
+  //     if (user != null) {
+  //       // Save user data to Firestore
+  //       await FirestoreService().addUser(
+  //         name: user.displayName ?? 'Unknown', // Replace with actual value if available
+  //         email: user.email ?? widget.phoneNumber, // Use phone number if email is null
+  //         profileUrl: user.photoURL ?? '',
+  //         userId: user.uid,
+  //         authType: 'phone',
+  //         latitude: _currentPosition!.latitude.toString(),
+  //         longitude: _currentPosition!.longitude.toString(),
+  //         city: city,
+  //         state: state,
+  //         country: country,
+  //       );
+  //
+  //       // Navigate to the next screen
+  //       Navigator.pushReplacement(
+  //         context,
+  //         MaterialPageRoute(builder: (context) => const AddYouDeviceScreen()),
+  //       );
+  //     } else {
+  //       Fluttertoast.showToast(msg: "User authentication failed.");
+  //     }
+  //   } catch (e) {
+  //     Fluttertoast.showToast(msg: "Invalid OTP: ${e.toString()}");
+  //   } finally {
+  //     setState(() {
+  //       isLoading = false;
+  //     });
+  //   }
+  // }
+
 
   @override
   Widget build(BuildContext context) {
     var height = MediaQuery.of(context).size.height;
     var width = MediaQuery.of(context).size.width;
-    print("widget.verificationId");
-    print(widget.verificationId);
+
 
     return Scaffold(
       body: SingleChildScrollView(

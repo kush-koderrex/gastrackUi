@@ -18,7 +18,7 @@ class PermissionEnable {
       if (checkBlueTooth) {
         return true;
       } else {
-        await LocationPermission().enable();
+        // await LocationPermission().enable();
         return false;
       }
     } else {

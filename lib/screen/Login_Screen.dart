@@ -2,12 +2,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:gas_track_ui/FirebaseSevice.dart';
-import 'package:gas_track_ui/LocalStorege.dart';
+import 'package:gas_track_ui/Services/FirebaseSevice.dart';
+import 'package:gas_track_ui/LocalStorage.dart';
+import 'package:gas_track_ui/Services/LocationService.dart';
 import 'package:gas_track_ui/screen/AddYouDevice.dart';
 import 'package:gas_track_ui/screen/OtpScreen.dart';
 import 'package:gas_track_ui/utils/utils.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:geocoding/geocoding.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -20,6 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>(); // Form key to identify the form
   final _phoneController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
   // String phoneNumber = ;
   String verificationId = "";
   String otpCode = "";
@@ -41,38 +45,203 @@ class _LoginScreenState extends State<LoginScreen> {
   String? appleId;
   bool isLoading = false;
 
+  Position? _currentPosition;
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    _getLocation();
+    super.initState();
+  }
+  Future<void> _getLocation() async {
+    try {
+      final locationService = LocationService();
+      final position = await locationService.getCurrentLocation();
+
+      if (mounted) { // Ensure widget is still in the widget tree
+        if (position != null) {
+          setState(() {
+            _currentPosition = position;
+          });
+          print("Latitude: ${position.latitude}, Longitude: ${position.longitude}");
+        } else {
+          print("Location permission denied or location unavailable.");
+        }
+      }
+    } catch (e) {
+      print("Error retrieving location: $e");
+    }
+  }
+
+
+  // Future<void> _getLocation() async {
+  //   final locationService = LocationService();
+  //   final position = await locationService.getCurrentLocation();
+  //   if (position != null) {
+  //     setState(() {
+  //       _currentPosition = position;
+  //     });
+  //     print("Latitude: ${position.latitude}, Longitude: ${position.longitude}");
+  //   } else {
+  //     print("Location permission denied or location unavailable.");
+  //   }
+  // }
+
+  Future<Map<String, String>> getLocationDetails(
+      double latitude, double longitude) async {
+    try {
+      List<Placemark> placemarks =
+          await placemarkFromCoordinates(latitude, longitude);
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        return {
+          'country': place.country ?? '',
+          'state': place.administrativeArea ?? '',
+          'city': place.locality ?? '',
+        };
+      } else {
+        return {'country': '', 'state': '', 'city': ''};
+      }
+    } catch (e) {
+      print(e);
+      return {'country': '', 'state': '', 'city': ''};
+    }
+  }
+
+  // Future<void> loginWithGoogle() async {
+  //   _getLocation();
+  //   final googleSignIn = GoogleSignIn();
+  //   Map<String, String> locationDetails = await getLocationDetails(
+  //       _currentPosition!.latitude, _currentPosition!.longitude);
+  //   String country = locationDetails['country'] ?? 'N/A';
+  //   String state = locationDetails['state'] ?? 'N/A';
+  //   String city = locationDetails['city'] ?? 'N/A';
+  //
+  //   print("Country: $country");
+  //   print("State: $state");
+  //   print("City: $city");
+  //
+  //   try {
+  //     await googleSignIn.signOut();
+  //     final googleSignInAccount = await googleSignIn.signIn();
+  //
+  //     if (googleSignInAccount != null) {
+  //       setState(() {
+  //         googleName = googleSignInAccount.displayName;
+  //         googleEmail = googleSignInAccount.email;
+  //         googlePhotoUrl = googleSignInAccount.photoUrl;
+  //         googleId = googleSignInAccount.id;
+  //       });
+  //
+  //       if (_currentPosition != null) {
+  //         await FirestoreService().addUser(
+  //           authType: "Google",
+  //           name: googleName!,
+  //           email: googleEmail!,
+  //           phone: "",
+  //           profileUrl: googlePhotoUrl!,
+  //           userId: googleId!,
+  //           latitude: _currentPosition!.latitude.toString(),
+  //           longitude: _currentPosition!.longitude.toString(),
+  //           city: '$city',
+  //           state: '$state',
+  //           country: "$country",
+  //         );
+  //         Utils.cusUuid =googleEmail!;
+  //       } else {
+  //         print("Current position is not available.");
+  //       }
+  //
+  //       await UserPreferences().saveUserData(
+  //         name: googleName!,
+  //         email: googleEmail!,
+  //         profileUrl: googlePhotoUrl!,
+  //         userId: googleId!,
+  //       );
+  //
+  //
+  //
+  //
+  //
+  //       Navigator.pushReplacement(
+  //         context,
+  //         MaterialPageRoute(
+  //           builder: (context) => const AddYouDeviceScreen(),
+  //         ),
+  //       );
+  //     }
+  //   } catch (e) {
+  //     Fluttertoast.showToast(
+  //       msg: "Google Login Error: ${e.toString()}",
+  //       toastLength: Toast.LENGTH_LONG,
+  //       gravity: ToastGravity.BOTTOM,
+  //       backgroundColor: Colors.black,
+  //       textColor: Colors.white,
+  //       fontSize: 16.0,
+  //     );
+  //     debugPrint("Google Login Error: ${e.toString()}");
+  //   }
+  // }
+
+
   Future<void> loginWithGoogle() async {
-    var googleSignIn = GoogleSignIn();
-    GoogleSignInAccount? googleSignInAccount;
+    await _getLocation(); // Ensure location is fetched before using it
+
+    if (_currentPosition == null) {
+      Fluttertoast.showToast(
+        msg: "Unable to get location. Please ensure location is enabled.",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.black,
+        textColor: Colors.white,
+      );
+      return; // Stop further execution if location is not available
+    }
 
     try {
-      await googleSignIn.signOut();
-      googleSignInAccount = await googleSignIn.signIn();
+      final googleSignIn = GoogleSignIn();
+      await googleSignIn.signOut(); // Ensure fresh sign-in
+      final googleSignInAccount = await googleSignIn.signIn();
 
       if (googleSignInAccount != null) {
-        setState(() {
-          googleName = googleSignInAccount?.displayName;
-          googleEmail = googleSignInAccount?.email;
-          googlePhotoUrl = googleSignInAccount?.photoUrl;
-          googleId = googleSignInAccount?.id;
-          print(googleName);
-          print(googleEmail);
-          print(googlePhotoUrl);
-          print(googleId);
-        });
-
-        FirestoreService().addUser(
-          name: googleName.toString(),
-          email: googleEmail.toString(),
-          profileUrl: googlePhotoUrl.toString(),
-          userId: googleId.toString(),
+        Map<String, String> locationDetails = await getLocationDetails(
+          _currentPosition!.latitude,
+          _currentPosition!.longitude,
         );
 
-        UserPreferences().saveUserData(
-          name: googleName.toString(),
-          email: googleEmail.toString(),
-          profileUrl: googlePhotoUrl.toString(),
-          userId: googleId.toString(),
+        String country = locationDetails['country'] ?? 'N/A';
+        String state = locationDetails['state'] ?? 'N/A';
+        String city = locationDetails['city'] ?? 'N/A';
+
+        setState(() {
+          googleName = googleSignInAccount.displayName ?? "N/A";
+          googleEmail = googleSignInAccount.email;
+          googlePhotoUrl = googleSignInAccount.photoUrl ?? "";
+          googleId = googleSignInAccount.id;
+        });
+
+        // Save user data to Firestore
+        await FirestoreService().addUser(
+          authType: "Google",
+          name: googleName!,
+          email: googleEmail!,
+          phone: "", // Google login doesn't provide phone number
+          profileUrl: googlePhotoUrl!,
+          userId: googleId!,
+          latitude: _currentPosition!.latitude.toString(),
+          longitude: _currentPosition!.longitude.toString(),
+          city: city,
+          state: state,
+          country: country, customer_id: googleEmail!,
+        );
+
+        Utils.cusUuid = googleEmail!;
+
+        await UserPreferences().saveUserData(
+          name: googleName!,
+          email: googleEmail!,
+          profileUrl: googlePhotoUrl!,
+          userId: googleId!,
         );
 
         Navigator.pushReplacement(
@@ -81,21 +250,25 @@ class _LoginScreenState extends State<LoginScreen> {
             builder: (context) => const AddYouDeviceScreen(),
           ),
         );
+      } else {
+        Fluttertoast.showToast(
+          msg: "Google sign-in canceled.",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+        );
       }
     } catch (e) {
       Fluttertoast.showToast(
         msg: "Google Login Error: ${e.toString()}",
         toastLength: Toast.LENGTH_LONG,
-        gravity:
-            ToastGravity.BOTTOM, // You can change this to TOP, CENTER, etc.
-        timeInSecForIosWeb: 1,
-        backgroundColor: Colors.black, // Background color of the toast
-        textColor: Colors.white, // Text color of the toast
-        fontSize: 16.0, // Font size of the toast
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.black,
+        textColor: Colors.white,
       );
       debugPrint("Google Login Error: ${e.toString()}");
     }
   }
+
 
   Future<void> loginWithFacebook() async {
     try {
