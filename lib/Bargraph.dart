@@ -124,6 +124,72 @@ class _BarChart extends StatelessWidget {
   }
 }
 
+// class DayGraph extends StatefulWidget {
+//   final String customerId;
+//
+//   const DayGraph({super.key, required this.customerId});
+//
+//   @override
+//   _DayGraphState createState() => _DayGraphState();
+// }
+//
+// class _DayGraphState extends State<DayGraph> {
+//   List<double> dailyValues = [];
+//
+//   @override
+//   void initState() {
+//     super.initState();
+//     fetchDailyData();
+//   }
+//
+//   List<double> calculateDailyAverages(List<Map<String, dynamic>> readings) {
+//     Map<int, List<double>> hourlyData = {};
+//
+//     for (var reading in readings) {
+//       DateTime date = (reading['reading_date'] as Timestamp).toDate();
+//       int hour = date.hour;
+//       double remainGas = double.tryParse(reading['remainGas']) ?? 0;
+//
+//       hourlyData.putIfAbsent(hour, () => []).add(remainGas);
+//     }
+//
+//     List<double> averages = [];
+//     for (int i = 0; i < 24; i += 4) {
+//       double sum = 0;
+//       int count = 0;
+//
+//       for (int j = i; j < i + 4; j++) {
+//         if (hourlyData.containsKey(j)) {
+//           sum += hourlyData[j]!.reduce((a, b) => a + b);
+//           count += hourlyData[j]!.length;
+//         }
+//       }
+//       averages.add(count > 0 ? sum / count : 0);
+//     }
+//     return averages;
+//   }
+//
+//   Future<void> fetchDailyData() async {
+//     FirestoreService service = FirestoreService();
+//     List<Map<String, dynamic>> readings = await service.getGasReadings(widget.customerId);
+//     setState(() {
+//       dailyValues = calculateDailyAverages(readings);
+//     });
+//   }
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return dailyValues.isEmpty
+//         ? const Center(child: CircularProgressIndicator())
+//         : _BarChart(
+//       barGroups: _BarChart.generateBarGroups(dailyValues),
+//       getXTitles: _BarChart.getDynamicXTitles(['12-4', '4-8', '8-12', '12-16', '16-20', '20-24']),
+//       maxY: 100,
+//     );
+//   }
+// }
+
+
 class DayGraph extends StatefulWidget {
   final String customerId;
 
@@ -143,35 +209,42 @@ class _DayGraphState extends State<DayGraph> {
   }
 
   List<double> calculateDailyAverages(List<Map<String, dynamic>> readings) {
-    Map<int, List<double>> hourlyData = {};
+    DateTime now = DateTime.now();
+
+    // Group readings by 4-hour intervals
+    Map<int, List<double>> intervalData = {}; // Key: Interval (0-5), Value: Gas readings
 
     for (var reading in readings) {
       DateTime date = (reading['reading_date'] as Timestamp).toDate();
-      int hour = date.hour;
-      double remainGas = double.tryParse(reading['remainGas']) ?? 0;
 
-      hourlyData.putIfAbsent(hour, () => []).add(remainGas);
-    }
+      // Filter readings for today only
+      if (date.year == now.year && date.month == now.month && date.day == now.day) {
+        int hour = date.hour; // Hour of the day (0-23)
 
-    List<double> averages = [];
-    for (int i = 0; i < 24; i += 4) {
-      double sum = 0;
-      int count = 0;
+        // Determine 4-hour interval: 0-3, 4-7, 8-11, ..., 20-23
+        int interval = hour ~/ 4;
 
-      for (int j = i; j < i + 4; j++) {
-        if (hourlyData.containsKey(j)) {
-          sum += hourlyData[j]!.reduce((a, b) => a + b);
-          count += hourlyData[j]!.length;
-        }
+        double remainGas = double.tryParse(reading['remainGas']) ?? 0;
+        intervalData.putIfAbsent(interval, () => []).add(remainGas);
       }
-      averages.add(count > 0 ? sum / count : 0);
     }
+
+    // Calculate the average for each interval (0-5 for 6 intervals in a day)
+    List<double> averages = List.generate(6, (index) {
+      if (intervalData.containsKey(index)) {
+        double sum = intervalData[index]!.reduce((a, b) => a + b);
+        return sum / intervalData[index]!.length;
+      }
+      return 0; // No data for this interval
+    });
+
     return averages;
   }
 
   Future<void> fetchDailyData() async {
     FirestoreService service = FirestoreService();
     List<Map<String, dynamic>> readings = await service.getGasReadings(widget.customerId);
+
     setState(() {
       dailyValues = calculateDailyAverages(readings);
     });
@@ -183,11 +256,14 @@ class _DayGraphState extends State<DayGraph> {
         ? const Center(child: CircularProgressIndicator())
         : _BarChart(
       barGroups: _BarChart.generateBarGroups(dailyValues),
-      getXTitles: _BarChart.getDynamicXTitles(['12-4', '4-8', '8-12', '12-16', '16-20', '20-24']),
+      getXTitles: _BarChart.getDynamicXTitles(
+        ['12-4 AM', '4-8 AM', '8-12 PM', '12-4 PM', '4-8 PM', '8-12 AM'],
+      ),
       maxY: 100,
     );
   }
 }
+
 
 class WeeklyGraph extends StatefulWidget {
   final String customerId;
@@ -207,26 +283,33 @@ class _WeeklyGraphState extends State<WeeklyGraph> {
     fetchWeeklyData();
   }
 
-  List<double> calculateWeeklyAverages(List<Map<String, dynamic>> readings) {
-    Map<int, List<double>> dailyData = {};
+  List<double> calculatePastWeekAverages(List<Map<String, dynamic>> readings) {
+    DateTime now = DateTime.now();
+    DateTime weekAgo = now.subtract(const Duration(days: 7));
+
+    Map<int, List<double>> dailyData = {}; // Maps weekday to readings
 
     for (var reading in readings) {
       DateTime date = (reading['reading_date'] as Timestamp).toDate();
-      int weekday = date.weekday;
-      double remainGas = double.tryParse(reading['remainGas']) ?? 0;
 
-      dailyData.putIfAbsent(weekday, () => []).add(remainGas);
-    }
+      // Filter data within the last 7 days
+      if (date.isAfter(weekAgo) && date.isBefore(now)) {
+        int weekday = date.weekday; // Monday=1, ..., Sunday=7
+        double remainGas = double.tryParse(reading['remainGas']) ?? 0;
 
-    List<double> averages = [];
-    for (int i = 1; i <= 7; i++) {
-      if (dailyData.containsKey(i)) {
-        double sum = dailyData[i]!.reduce((a, b) => a + b);
-        averages.add(sum / dailyData[i]!.length);
-      } else {
-        averages.add(0);
+        dailyData.putIfAbsent(weekday, () => []).add(remainGas);
       }
     }
+
+    // Compute averages for each day (1 = Mon, ..., 7 = Sun)
+    List<double> averages = List.generate(7, (index) {
+      int weekday = index + 1; // 1-based weekday
+      if (dailyData.containsKey(weekday)) {
+        double sum = dailyData[weekday]!.reduce((a, b) => a + b);
+        return sum / dailyData[weekday]!.length;
+      }
+      return 0; // No data for this day
+    });
 
     return averages;
   }
@@ -234,8 +317,9 @@ class _WeeklyGraphState extends State<WeeklyGraph> {
   Future<void> fetchWeeklyData() async {
     FirestoreService service = FirestoreService();
     List<Map<String, dynamic>> readings = await service.getGasReadings(widget.customerId);
+
     setState(() {
-      weeklyValues = calculateWeeklyAverages(readings);
+      weeklyValues = calculatePastWeekAverages(readings);
     });
   }
 
@@ -245,11 +329,78 @@ class _WeeklyGraphState extends State<WeeklyGraph> {
         ? const Center(child: CircularProgressIndicator())
         : _BarChart(
       barGroups: _BarChart.generateBarGroups(weeklyValues),
-      getXTitles: _BarChart.getDynamicXTitles(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']),
+      getXTitles: _BarChart.getDynamicXTitles(
+        ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+      ),
       maxY: 100,
     );
   }
 }
+
+
+
+
+// class WeeklyGraph extends StatefulWidget {
+//   final String customerId;
+//
+//   const WeeklyGraph({super.key, required this.customerId});
+//
+//   @override
+//   _WeeklyGraphState createState() => _WeeklyGraphState();
+// }
+//
+// class _WeeklyGraphState extends State<WeeklyGraph> {
+//   List<double> weeklyValues = [];
+//
+//   @override
+//   void initState() {
+//     super.initState();
+//     fetchWeeklyData();
+//   }
+//
+//   List<double> calculateWeeklyAverages(List<Map<String, dynamic>> readings) {
+//     Map<int, List<double>> dailyData = {};
+//
+//     for (var reading in readings) {
+//       DateTime date = (reading['reading_date'] as Timestamp).toDate();
+//       int weekday = date.weekday;
+//       double remainGas = double.tryParse(reading['remainGas']) ?? 0;
+//
+//       dailyData.putIfAbsent(weekday, () => []).add(remainGas);
+//     }
+//
+//     List<double> averages = [];
+//     for (int i = 1; i <= 7; i++) {
+//       if (dailyData.containsKey(i)) {
+//         double sum = dailyData[i]!.reduce((a, b) => a + b);
+//         averages.add(sum / dailyData[i]!.length);
+//       } else {
+//         averages.add(0);
+//       }
+//     }
+//
+//     return averages;
+//   }
+//
+//   Future<void> fetchWeeklyData() async {
+//     FirestoreService service = FirestoreService();
+//     List<Map<String, dynamic>> readings = await service.getGasReadings(widget.customerId);
+//     setState(() {
+//       weeklyValues = calculateWeeklyAverages(readings);
+//     });
+//   }
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return weeklyValues.isEmpty
+//         ? const Center(child: CircularProgressIndicator())
+//         : _BarChart(
+//       barGroups: _BarChart.generateBarGroups(weeklyValues),
+//       getXTitles: _BarChart.getDynamicXTitles(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']),
+//       maxY: 100,
+//     );
+//   }
+// }
 
 class MonthGraph extends StatefulWidget {
   final String customerId;
