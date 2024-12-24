@@ -4,8 +4,6 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gas_track_ui/Services/FirebaseSevice.dart';
 import 'package:gas_track_ui/Services/LocationService.dart';
 import 'package:gas_track_ui/screen/AddYouDevice.dart';
-import 'package:gas_track_ui/screen/Login_Screen.dart';
-import 'package:gas_track_ui/utils/app_colors.dart';
 import 'package:gas_track_ui/utils/utils.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';

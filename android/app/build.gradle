@@ -52,6 +52,9 @@ android {
     }
     dependencies {
         implementation "androidx.work:work-runtime-ktx:2.8.1"
+        implementation 'com.google.firebase:firebase-firestore-ktx:24.5.0'
+        implementation 'com.google.firebase:firebase-analytics-ktx'
+
     }
 
     sourceSets {

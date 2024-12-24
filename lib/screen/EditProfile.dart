@@ -1,8 +1,8 @@
-import 'package:easy_stepper/easy_stepper.dart';
 import 'package:flutter/material.dart';
-import 'package:gas_track_ui/screen/DeviceAdded.dart';
-import 'package:gas_track_ui/utils/app_colors.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:gas_track_ui/Services/FirebaseSevice.dart';
 import 'package:gas_track_ui/utils/utils.dart';
+import 'dart:developer' as developer;
 
 class EditProfile extends StatefulWidget {
   const EditProfile({super.key});
@@ -12,31 +12,87 @@ class EditProfile extends StatefulWidget {
 }
 
 class _EditProfileState extends State<EditProfile> {
+
+
+  Map<String, dynamic>? userData;
+  bool isLoading = true;
+  final firestoreService = FirestoreService();
+
+  TextEditingController? _deviceNameController;
+  TextEditingController? _gasCompanyNameController;
+  TextEditingController? _gasConsumerNumberController;
+
+  Future<void> fetchUserData() async {
+    // Replace with actual user email/phone
+    String email = Utils.cusUuid;  // Replace with actual email
+    String phone = '';        // Replace with actual phone number if email is null
+
+    var data = await FirestoreService().getUserData(email: email, phone: phone);
+    developer.log(data.toString());
+
+    setState(() {
+      userData = data;
+      isLoading = false;
+       _deviceNameController = TextEditingController(text: '${userData!['device_name']}');
+       _gasCompanyNameController = TextEditingController(text: '${userData!['gas_company']}');
+       _gasConsumerNumberController = TextEditingController(text: '${userData!['gas_consumer_no']}');
+    });
+  }
+
+
+  int activeStep = 1;
+
+  String? _validatePhoneNumber(String? value) {
+    // Regular expression to validate phone number
+    final phoneRegExp = RegExp(r'^\+91\d{10}$');
+    if (value == null || value.isEmpty) {
+      return 'Please enter a phone number';
+    }
+    if (!phoneRegExp.hasMatch(value)) {
+      return 'Please enter a valid phone number (+91XXXXXXXXXX)';
+    }
+    return null;
+  }
+
+
+
+
+  void updateCustomerGasDetails() async {
+    try {
+      await firestoreService.updateGasDetails(
+        email: Utils.cusUuid,
+        gasConsumerNo: _gasConsumerNumberController!.text,
+        deviceName: _deviceNameController!.text,
+        gasCompany: _gasCompanyNameController!.text,
+        phone:  Utils.cusUuid,
+      );
+      print('Gas details updated successfully.');
+      Fluttertoast.showToast(msg: "Gas details updated successfully.");
+
+
+    } catch (e) {
+      print('Error: $e');
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Fetch user data when the screen is initialized
+    fetchUserData();
+  }
+
+
   @override
   Widget build(BuildContext context) {
     var height = MediaQuery.of(context).size.height;
     var width = MediaQuery.of(context).size.width;
     // final _phoneController = TextEditingController();
-    final _deviceNameController = TextEditingController();
-    final _gasCompanyNameController = TextEditingController();
-    final _gasConsumerNumberController = TextEditingController();
-    int activeStep = 1;
-
-    String? _validatePhoneNumber(String? value) {
-      // Regular expression to validate phone number
-      final phoneRegExp = RegExp(r'^\+91\d{10}$');
-      if (value == null || value.isEmpty) {
-        return 'Please enter a phone number';
-      }
-      if (!phoneRegExp.hasMatch(value)) {
-        return 'Please enter a valid phone number (+91XXXXXXXXXX)';
-      }
-      return null;
-    }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           "Edit Profile",
           style: AppStyles.appBarTextStyle,
         ),
@@ -45,8 +101,8 @@ class _EditProfileState extends State<EditProfile> {
         elevation: 0, // Removes the shadow below the AppBar
         centerTitle: true, // Optional: centers the title
         iconTheme:
-            IconThemeData(color: Colors.white), // Makes the back arrow white
-        titleTextStyle: TextStyle(color: Colors.white, fontSize: 20),
+            const IconThemeData(color: Colors.white), // Makes the back arrow white
+        titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20),
       ),
       extendBodyBehindAppBar: true, // Ensures the body goes behind the AppBar
       body: SingleChildScrollView(
@@ -101,7 +157,7 @@ class _EditProfileState extends State<EditProfile> {
                             padding: const EdgeInsets.only(top: 5.0),
                             child: Column(
                               children: <Widget>[
-                                SizedBox(
+                                const SizedBox(
                                   height: 40,
                                 ),
                                 Container(
@@ -109,13 +165,14 @@ class _EditProfileState extends State<EditProfile> {
                                   width: 350,
                                   height: 60,
                                   child: TextFormField(
+                                    enabled: false,
                                     controller: _deviceNameController,
                                     keyboardType: TextInputType.text,
                                     decoration: InputDecoration(
                                       filled: true,
                                       fillColor: Colors
                                           .grey.shade200, // Grey inside color
-                                      hintText: 'Kitchen Cylinder',
+                                      hintText: 'Device Name',
                                       hintStyle:  AppStyles.customTextStyle(
                                           fontSize: 13.0,
                                           fontWeight:
@@ -163,7 +220,7 @@ class _EditProfileState extends State<EditProfile> {
                                       filled: true,
                                       fillColor: Colors
                                           .grey.shade200, // Grey inside color
-                                      hintText: 'Hp Gas',
+                                      hintText: 'Company Name',
                                       hintStyle: AppStyles.customTextStyle(
                                           fontSize: 13.0,
                                           fontWeight:
@@ -211,7 +268,7 @@ class _EditProfileState extends State<EditProfile> {
                                       filled: true,
                                       fillColor: Colors
                                           .grey.shade200, // Grey inside color
-                                      hintText: '3782037',
+                                      hintText: 'Eg:-3456335',
                                       hintStyle: AppStyles.customTextStyle(
                                           fontSize: 13.0,
                                           fontWeight:
@@ -263,9 +320,17 @@ class _EditProfileState extends State<EditProfile> {
                                       child: SizedBox(
                                         width: 350,
                                         child: ElevatedButton(
-                                          onPressed: () {
+                                          onPressed: () async{
+                                            updateCustomerGasDetails();
+                                            // await FirestoreService().updateGasDetails(
+                                            //   email: Utils.cusUuid,
+                                            //   phone: "",
+                                            //   gasConsumerNo: _gasConsumerNumberController.text,
+                                            //   deviceName: _deviceNameController.text,
+                                            //   gasCompany: _gasCompanyNameController.text,
+                                            // );
                                             // if (Form.of(context)?.validate() ?? false) {
-                                            Navigator.pop(context);
+                                            // Navigator.pop(context);
                                             // }
                                           },
                                           style: ElevatedButton.styleFrom(

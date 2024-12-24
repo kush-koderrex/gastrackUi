@@ -11,6 +11,7 @@ import 'package:gas_track_ui/utils/utils.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -186,6 +187,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> loginWithGoogle() async {
     await _getLocation(); // Ensure location is fetched before using it
+    final prefs = await SharedPreferences.getInstance();
 
     if (_currentPosition == null) {
       Fluttertoast.showToast(
@@ -220,7 +222,8 @@ class _LoginScreenState extends State<LoginScreen> {
           googleId = googleSignInAccount.id;
         });
 
-        // Save user data to Firestore
+
+
         await FirestoreService().addUser(
           authType: "Google",
           name: googleName!,

@@ -1,9 +1,13 @@
+
 import 'package:flutter/material.dart';
-import 'package:gas_track_ui/main.dart';
+import 'package:gas_track_ui/LocalStorage.dart';
+import 'package:gas_track_ui/screen/AddYouDevice.dart';
 import 'package:gas_track_ui/screen/Login_Screen.dart';
+
 
 import 'package:gas_track_ui/utils/app_colors.dart';
 import 'package:gas_track_ui/utils/utils.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class OnBoardScreen extends StatefulWidget {
   const OnBoardScreen({super.key});
@@ -13,6 +17,8 @@ class OnBoardScreen extends StatefulWidget {
 }
 
 class _OnBoardScreenState extends State<OnBoardScreen> {
+
+  final prefs =  SharedPreferences.getInstance();
   @override
   Widget build(BuildContext context) {
     var height = MediaQuery.of(context).size.height;
@@ -83,7 +89,7 @@ class _OnBoardScreenState extends State<OnBoardScreen> {
               )
               ],
             ),
-            
+
             const SizedBox(height: 20,),
             const Text(
               "Fast Track with GasTrack",
@@ -123,13 +129,59 @@ class _OnBoardScreenState extends State<OnBoardScreen> {
                       color: Colors.white,
                     ),
                   ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const LoginScreen(),
-                      ),
-                    );
+                  onTap: ()async
+                  // {
+                  //   var userToken = await prefs.getString("userToken");
+                  //   if(userToken!=null && userToken!=""  ){
+                  //     Navigator.push(
+                  //       context,
+                  //       MaterialPageRoute(
+                  //         builder: (context) => const LoginScreen(),
+                  //       ),
+                  //     );
+                  //   }else{
+                  //     Navigator.push(
+                  //       context,
+                  //       MaterialPageRoute(
+                  //         builder: (context) => const AddYouDeviceScreen(),
+                  //       ),
+                  //     );
+                  //
+                  //
+                  //   }
+                  //
+                  //
+                  //
+                  //
+                  //
+                  //
+                  //
+                  //
+                  //
+                  // },
+                      {
+                    // final prefs = await SharedPreferences.getInstance();
+                    var userToken = await UserPreferences().getUserData();
+
+                    // Access the userId from the returned map
+                    print("User ID: ${userToken["userId"]}");
+
+
+                    if (userToken["userId"] != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AddYouDeviceScreen(),
+                        ),
+                      );
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LoginScreen(),
+                        ),
+                      );
+                    }
                   },
                 ),
               ],

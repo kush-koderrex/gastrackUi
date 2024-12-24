@@ -26,7 +26,8 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // requestPermissions();
   await Firebase.initializeApp();
-  FlutterBluePlus.setLogLevel(LogLevel.verbose, color: true);
+  // FlutterBluePlus.setLogLevel(LogLevel.verbose, color: true);
+  FlutterBluePlus.setLogLevel(LogLevel.debug, color: true);
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp])
       .then((_) {
 

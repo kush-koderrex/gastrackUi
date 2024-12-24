@@ -20,7 +20,6 @@ class DeviceaddedScreen extends StatefulWidget {
 }
 
 class _DeviceaddedScreenState extends State<DeviceaddedScreen> {
-
   int activeStep = 2;
   List<ScanResult> _scanResults = [];
   List<BluetoothService> _services = [];
@@ -74,154 +73,21 @@ class _DeviceaddedScreenState extends State<DeviceaddedScreen> {
     }
   }
 
-  // Future GetData() async {
-  //   print("Searched Device");
-  //   // Utils.device = _scanResults[0].device;
-  //   developer.log("Scan Results:-${Utils.device.toString()}");
-  //   developer.log("Scan Results:-${Utils.device.runtimeType.toString()}");
-  //   developer.log("Scan Results array:-${_scanResults.toString()}");
-  //   developer.log("Scan length:-${_scanResults.length.toString()}");
-  //   print(Utils.device);
-  //   print(Utils.device.toString());
-  //   print(Utils.device.connect());
-  //   print(Utils.device.connectAndUpdateStream());
-  //   Utils.device.connectAndUpdateStream().catchError((e) {
-  //     Snackbar.show(ABC.c, prettyException("Connect Error:", e),
-  //         success: false);
-  //   });
-  //   print("isConnected:- ${Utils.device.isConnected}");
-  //   if (Utils.device.isConnected == true) {
-  //     _services = await Utils.device.discoverServices();
-  //     print("_servicestest");
-  //     developer.log(_services.toString());
-  //
-  //     for (var service in _services) {
-  //       // Loop through each characteristic in the service
-  //       for (var characteristic in service.characteristics) {
-  //         // Check if the characteristic UUID matches the writeCharacteristicUUID
-  //         if (characteristic.uuid.toString() ==
-  //             Utils.writeCharacteristicUUID) {
-  //           Utils.Writecharacteristic = characteristic;
-  //         }
-  //         // Check if the characteristic UUID matches the readCharacteristicUUID
-  //         else if (characteristic.uuid.toString() ==
-  //             Utils.readCharacteristicUUID) {
-  //           Utils.Readcharacteristic = characteristic;
-  //         }
-  //       }
-  //     }
-  //     developer.log(
-  //         "Readcharacteristic:-${Utils.Readcharacteristic.characteristicUuid.toString()}");
-  //
-  //     // developer.log("Writecharacteristic:-${Writecharacteristic.toString()}");
-  //     developer.log(
-  //         "Writecharacteristic:-${Utils.Writecharacteristic.characteristicUuid.toString()}");
-  //
-  //     for (var service in _services) {
-  //       // Loop through each characteristic in the service
-  //       for (var characteristic in service.characteristics) {
-  //         // Add each characteristic to the _characteristic list
-  //         _characteristic.add(characteristic);
-  //       }
-  //     }
-  //     // print("_characteristic-------------------------->");
-  //     developer.log("_characteristic--->" + _characteristic.toString());
-  //     print("_characteristic length ->${_characteristic.length}");
-  //
-  //     Utils.onSubscribePressed(Utils.Readcharacteristic);
-  //     Utils.subscribeToCharacteristic(Utils.Readcharacteristic);
-  //
-  //     print("Remote:-${Utils.Writecharacteristic.remoteId}");
-  //     print("serviceUuid:-${Utils.Writecharacteristic.serviceUuid}");
-  //     print(
-  //         "characteristicUuid:-${Utils.Writecharacteristic.characteristicUuid}");
-  //     print(
-  //         "secondaryServiceUuid:-${Utils.Writecharacteristic.secondaryServiceUuid}");
-  //
-  //     // onSubscribePressed(Utils.Readcharacteristic);
-  //     // print("Read---->Read---->");
-  //     print("Read From:-${Utils.Readcharacteristic.characteristicUuid}");
-  //     print("Is Subscribed:-${Utils.Readcharacteristic.isNotifying}");
-  //
-  //     if (Utils.Readcharacteristic.isNotifying == true) {
-  //       Utils.onWritePressedgenreq(Utils.Writecharacteristic);
-  //       // print(_characteristic[_characteristic.length-2].characteristicUuid);
-  //       Utils.onReadPressed(Utils.Readcharacteristic);
-  //       _lastValueSubscription =
-  //           Utils.Readcharacteristic.lastValueStream.listen((value) {
-  //         _value = value;
-  //       });
-  //
-  //       String data = _value.toString();
-  //       // print("Data:-${data}");
-  //       print("RecData:-${data}");
-  //
-  //       if (_value.isNotEmpty) {
-  //         List<String> hexList = _value
-  //             .map((decimal) => decimal.toRadixString(16).padLeft(2, '0'))
-  //             .toList();
-  //         String hexString = hexList.join('');
-  //         print("When Data is not null:-${data}");
-  //         print("hexString:-${hexString}");
-  //
-  //         _deviceResponse = parseDeviceResponse(hexString);
-  //
-  //         // print(_deviceResponse?.battery.toString());
-  //         // setState(() {
-  //         Utils.battery = "${_deviceResponse?.battery.toString()}";
-  //         Utils.weight =
-  //             "${_deviceResponse?.beforeDecimal}.${_deviceResponse?.afterDecimal}";
-  //         Utils.remainGas =
-  //             Utils.calculateGasPercentage(double.parse(Utils.weight))
-  //                 .toStringAsFixed(0);
-  //         // });
-  //         print("battery:-${_deviceResponse?.battery.toString()}");
-  //         print(
-  //             "weight:-${_deviceResponse?.beforeDecimal}.${_deviceResponse?.afterDecimal}");
-  //
-  //         // Fluttertoast.showToast(
-  //         //   msg: 'Device Connect successfully!',
-  //         //   toastLength: Toast.LENGTH_LONG,
-  //         //   gravity: ToastGravity.BOTTOM,
-  //         //   backgroundColor: Colors.black,
-  //         //   textColor: Colors.white,
-  //         //   fontSize: 16.0,
-  //         // );
-  //         setState(() {
-  //           isLoading = false;
-  //         });
-  //         Future.delayed(Duration(seconds: 1), () {
-  //           _lastValueSubscription.cancel();
-  //           Navigator.pushReplacement(
-  //             context,
-  //             MaterialPageRoute(
-  //               builder: (context) => Homescreen(),
-  //             ),
-  //           );
-  //
-  //           // showCustomDialog(context);
-  //         });
-  //
-  //
-  //
-  //         isGetData = true;
-  //       }
-  //       isSubscribe = true;
-  //     }
-  //     isConnected = true;
-  //   }
-  // }
-
 
   void processReceivedData() {
-    final hexString = _value.map((decimal) => decimal.toRadixString(16).padLeft(2, '0')).join('');
+    final hexString = _value
+        .map((decimal) => decimal.toRadixString(16).padLeft(2, '0'))
+        .join('');
     _deviceResponse = parseDeviceResponse(hexString);
 
     if (_deviceResponse != null) {
       Utils.battery = _deviceResponse!.battery;
-      Utils.weight = "${_deviceResponse!.beforeDecimal}.${_deviceResponse!.afterDecimal}";
-      Utils.remainGas = Utils.calculateGasPercentage(double.parse(Utils.weight)).toStringAsFixed(0);
-      print("Data updated: battery=${Utils.battery}, weight=${Utils.weight}, gas=${Utils.remainGas}");
+      Utils.weight =
+          "${_deviceResponse!.beforeDecimal}.${_deviceResponse!.afterDecimal}";
+      Utils.remainGas = Utils.calculateGasPercentage(double.parse(Utils.weight))
+          .toStringAsFixed(0);
+      print(
+          "Data updated: battery=${Utils.battery}, weight=${Utils.weight}, gas=${Utils.remainGas}");
 
       setState(() {
         isLoading = false;
@@ -229,7 +95,8 @@ class _DeviceaddedScreenState extends State<DeviceaddedScreen> {
       });
 
       _lastValueSubscription.cancel();
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Homescreen()));
+      Navigator.pushReplacement(
+          context, MaterialPageRoute(builder: (context) => Homescreen()));
     }
   }
 
@@ -239,7 +106,8 @@ class _DeviceaddedScreenState extends State<DeviceaddedScreen> {
     try {
       print("Connecting to device...");
       await Utils.device.connectAndUpdateStream().catchError((e) {
-        Snackbar.show(ABC.c, prettyException("Connect Error:", e), success: false);
+        Snackbar.show(ABC.c, prettyException("Connect Error:", e),
+            success: false);
       });
 
       if (Utils.device.isConnected) {
@@ -265,7 +133,8 @@ class _DeviceaddedScreenState extends State<DeviceaddedScreen> {
 
         if (isSubscribe) {
           await Utils.onWritePressedgenreq(Utils.Writecharacteristic);
-          _lastValueSubscription = Utils.Readcharacteristic.lastValueStream.listen((value) {
+          _lastValueSubscription =
+              Utils.Readcharacteristic.lastValueStream.listen((value) {
             if (value.isNotEmpty) {
               _value = value;
               processReceivedData();
@@ -277,7 +146,6 @@ class _DeviceaddedScreenState extends State<DeviceaddedScreen> {
       print("GetData error: $e");
     }
   }
-
 
   @override
   void dispose() {
@@ -525,13 +393,15 @@ class _DeviceaddedScreenState extends State<DeviceaddedScreen> {
     );
   }
 }
+
 void _showErrorPopup(BuildContext context) {
   showDialog(
     context: context,
     builder: (BuildContext context) {
       return AlertDialog(
         title: const Text("Something Went Wrong"),
-        content: const Text("We couldn't complete the setup. Please try again."),
+        content:
+            const Text("We couldn't complete the setup. Please try again."),
         actions: [
           TextButton(
             onPressed: () {
@@ -544,7 +414,6 @@ void _showErrorPopup(BuildContext context) {
     },
   );
 }
-
 
 // Custom clipper for creating a curved top
 class TopRoundedRectangleClipper extends CustomClipper<Path> {

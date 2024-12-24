@@ -1,8 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:gas_track_ui/LocalStorage.dart';
 import 'package:gas_track_ui/screen/CylinderDetailScreen.dart';
 import 'package:gas_track_ui/screen/EditProfile.dart';
 import 'package:gas_track_ui/screen/Firmware.dart';
+import 'package:gas_track_ui/screen/Login_Screen.dart';
 import 'package:gas_track_ui/utils/utils.dart';
 import 'package:slidable_button/slidable_button.dart';
 import 'package:slider_button/slider_button.dart';
@@ -14,36 +16,56 @@ class MenuScreen extends StatefulWidget {
   @override
   State<MenuScreen> createState() => _MenuScreenState();
 }
+
 Color blendWithWhite(Color color, [double amount = 0.2]) => Color.fromARGB(
     color.alpha,
     color.red + ((255 - color.red) * amount).round(),
     color.green + ((255 - color.green) * amount).round(),
     color.blue + ((255 - color.blue) * amount).round());
 
+// Future<void> _launchEmail(String email, String subject, String body) async {
+//   final Uri emailUri = Uri(
+//     scheme: 'mailto',
+//     path: email,
+//     query: _encodeQueryParameters(<String, String>{
+//       'subject': subject,
+//       'body': body,
+//     }),
+//   );
+//
+//   if (await canLaunchUrl(emailUri)) {
+//     await launchUrl(emailUri);
+//   } else {
+//     print('Could not launch email client');
+//   }
+// }
+//
+// // Helper function to encode query parameters
+// String? _encodeQueryParameters(Map<String, String> params) {
+//   return params.entries
+//       .map((e) =>
+//           '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+//       .join('&');
+// }
 
-Future<void> _launchEmail(String email, String subject, String body) async {
+
+void _sendEmail(String email, String subject, String body) async {
   final Uri emailUri = Uri(
     scheme: 'mailto',
     path: email,
-    query: _encodeQueryParameters(<String, String>{
+    queryParameters: {
       'subject': subject,
       'body': body,
-    }),
+    },
   );
 
   if (await canLaunchUrl(emailUri)) {
     await launchUrl(emailUri);
   } else {
-    print('Could not launch email client');
+    throw 'Could not launch $emailUri';
   }
 }
 
-// Helper function to encode query parameters
-String? _encodeQueryParameters(Map<String, String> params) {
-  return params.entries
-      .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
-      .join('&');
-}
 
 class _MenuScreenState extends State<MenuScreen> {
   @override
@@ -102,289 +124,361 @@ class _MenuScreenState extends State<MenuScreen> {
         titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20),
       ),
       extendBodyBehindAppBar: true, // Ensures the body goes behind the AppBar
-      body: Stack(
-        children: [
-          // Gradient with Custom Clip Path at the top of the screen
-          ClipPath(
-            clipper:
-                TopRoundedRectangleClipper(), // Custom clipper for the top curve
-            child: Container(
-              height: height * 0.30, // Adjust height of the effect
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xFFFA7365),
-                    Color(0xFF9A4DFF)
-                  ], // Gradient colors
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+      body: SingleChildScrollView(
+        child: Stack(
+          children: [
+            // Gradient with Custom Clip Path at the top of the screen
+            ClipPath(
+              clipper:
+                  TopRoundedRectangleClipper(), // Custom clipper for the top curve
+              child: Container(
+                height: height * 0.30, // Adjust height of the effect
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFFFA7365),
+                      Color(0xFF9A4DFF)
+                    ], // Gradient colors
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                 ),
               ),
             ),
-          ),
-
-          Padding(
-            padding: EdgeInsets.only(top: height / 9.5), // Adjust for gradient
-            child: Container(
-              height: height,
-              width: width,
-              decoration: BoxDecoration(
-                color: Colors.white54.withOpacity(0.30),
-                borderRadius: BorderRadius.circular(45.0),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Container(
-                  width: width,
-                  height: height,
-                  decoration: BoxDecoration(
-                    color: Colors.white54.withOpacity(0.20),
-                    borderRadius: BorderRadius.circular(45.0),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 10.0),
-                    child: Container(
-                      width: width,
-                      height: height,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(45.0),
-                      ),
-                      child: Padding(
-                          padding: const EdgeInsets.only(top: 10.0),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              const SizedBox(
-                                height: 20,
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(10.0),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      " Kitchen Cylinder",
-                                      style: AppStyles.customTextStyle(
-                                          fontSize: 18.0,
-                                          fontWeight: FontWeight.w500),
-                                    ),
-                                    Row(
-                                      children: [
-                                        Container(
-                                          width: 8,
-                                          height: 8,
-                                          decoration: const BoxDecoration(
-                                            color: Colors.green,
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                        const SizedBox(
-                                          width: 10,
-                                        ),
-                                        const Text(
-                                          "Connected",
-                                          style: TextStyle(
+        
+            Padding(
+              padding: EdgeInsets.only(top: height / 9.5), // Adjust for gradient
+              child: Container(
+                height: height,
+                width: width,
+                decoration: BoxDecoration(
+                  color: Colors.white54.withOpacity(0.30),
+                  borderRadius: BorderRadius.circular(45.0),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Container(
+                    width: width,
+                    height: height,
+                    decoration: BoxDecoration(
+                      color: Colors.white54.withOpacity(0.20),
+                      borderRadius: BorderRadius.circular(45.0),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 10.0),
+                      child: Container(
+                        width: width,
+                        height: height,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(45.0),
+                        ),
+                        child: Padding(
+                            padding: const EdgeInsets.only(top: 10.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                const SizedBox(
+                                  height: 20,
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(10.0),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        " ${Utils.device.platformName}",
+                                        style: AppStyles.customTextStyle(
+                                            fontSize: 18.0,
+                                            fontWeight: FontWeight.w500),
+                                      ),
+                                      Row(
+                                        children: [
+                                          Container(
+                                            width: 8,
+                                            height: 8,
+                                            decoration: const BoxDecoration(
                                               color: Colors.green,
-                                              fontFamily: 'Cerapro',
-                                              fontWeight: FontWeight.w500,
-                                              fontSize: 12),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(10.0),
-                                child: Container(
-                                  height: 500,
-                                  child: ListView.builder(
-                                    physics:
-                                        const NeverScrollableScrollPhysics(),
-                                    padding: EdgeInsets.zero, // Remove padding
-                                    itemCount: items.length,
-                                    itemBuilder: (context, index) {
-                                      return Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child: ListTile(
-                                          contentPadding: EdgeInsets.zero,
-                                          // leading: CircleAvatar(
-                                          //   child: Image.asset(
-                                          //     items[index]['image'],
-                                          //     width: 20,
-                                          //     color: Colors.white,
-                                          //     fit: BoxFit.fitWidth,
-                                          //   ),
-                                          //   backgroundColor: AppStyles.cutstomIconColor,
-                                          //   radius: 30, // Adjust radius for avatar
-                                          // ),
-                                          leading: Container(
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape
-                                                  .circle, // Ensure it's circular
-                                              gradient: LinearGradient(
-                                                colors: [
-                                                  Color(0xFFFA7365),
-                                                  Color(0xFF9A4DFF)
-                                                ],
-                                                begin: Alignment
-                                                    .topLeft, // Change direction as needed
-                                                end: Alignment.bottomRight,
-                                              ),
-                                            ),
-                                            child: CircleAvatar(
-                                              backgroundColor: Colors
-                                                  .transparent, // Make background transparent
-                                              child: Image.asset(
-                                                items[index]['image'],
-                                                width: 20,
-                                                height: 20,
-                                                color: Colors.white,
-                                                fit: BoxFit.fitHeight
-                                              ),
-                                              radius:
-                                                  30, // Adjust radius for avatar
+                                              shape: BoxShape.circle,
                                             ),
                                           ),
-
-                                          title: Text(
-                                            items[index]['name'],
-                                            style: AppStyles.customTextStyle(
-                                              fontSize: 14.0,
-                                              fontWeight: FontWeight.w400,
-                                            ),
+                                          const SizedBox(
+                                            width: 10,
                                           ),
-                                          trailing: items[index]['toggle']
-                                              ? Switch(
-                                                  // Display Switch when toggle is true
-                                                  value: items[index]['toggle'],
-                                                  onChanged: (value) {
-                                                    setState(() {
-                                                      items[index]['toggle'] =
-                                                          value;
-                                                    });
-                                                  },
-                                            activeTrackColor: AppStyles.cutstomIconColor,
-
-                                                )
-                                              : const Icon(Icons
-                                                  .chevron_right), // Display Icon when toggle is false
-                                          onTap: () {
-                                            _handleMenuItemTap(
-                                                context, items[index]['name']);
-                                          },
-                                        ),
-                                      );
-                                    },
+                                          const Text(
+                                            "Connected",
+                                            style: TextStyle(
+                                                color: Colors.green,
+                                                fontFamily: 'Cerapro',
+                                                fontWeight: FontWeight.w500,
+                                                fontSize: 12),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
-
-                                  // ListView.builder(
-                                  //   physics:
-                                  //       const NeverScrollableScrollPhysics(),
-                                  //   padding: EdgeInsets.zero, // Remove padding
-                                  //   itemCount: items.length,
-                                  //   itemBuilder: (context, index) {
-                                  //     return Padding(
-                                  //       padding: const EdgeInsets.all(8.0),
-                                  //       child: ListTile(
-                                  //         contentPadding: EdgeInsets.zero,
-                                  //         leading: CircleAvatar(
-                                  //           child: Image.asset(
-                                  //             items[index]['image'],
-                                  //             width: 20,
-                                  //             color: Colors.white,
-                                  //             fit: BoxFit.fitWidth,
-                                  //           ),
-                                  //           backgroundColor:
-                                  //               AppStyles.cutstomIconColor,
-                                  //           radius:
-                                  //               30, // Adjust radius for avatar
-                                  //         ),
-                                  //         title: Text(
-                                  //           items[index]['name'],
-                                  //           style: AppStyles.customTextStyle(
-                                  //               fontSize: 14.0,
-                                  //               fontWeight: FontWeight.w400),
-                                  //         ),
-                                  //         trailing: Row(
-                                  //           mainAxisSize: MainAxisSize.min,
-                                  //           children: [
-                                  //             if (items[index][
-                                  //                 'toggle']) // Toggle button for specific items
-                                  //               Switch(
-                                  //                 value: items[index]['toggle'],
-                                  //                 onChanged: (value) {
-                                  //                   setState(() {
-                                  //                     items[index]['toggle'] =
-                                  //                         value;
-                                  //                   });
-                                  //                 },
-                                  //               ),
-                                  //             const Icon(Icons.chevron_right),
-                                  //           ],
-                                  //         ),
-                                  //         onTap: () {
-                                  //           _handleMenuItemTap(
-                                  //               context, items[index]['name']);
-                                  //         },
-                                  //       ),
-                                  //     );
-                                  //   },
-                                  // ),
                                 ),
-                              ),
-                              Padding(
-                                padding: EdgeInsets.only(left: 20.0, top: 10),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "Contact Us",
-                                      style: AppStyles.customTextStyle(
-                                          fontSize: 15.0,
-                                          fontWeight: FontWeight.w500),
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 8.0),
-                                      child: InkWell(
-                                        onTap: (){
-                                          _launchEmail('gastrack.india@gmail.com', 'Hello from Gas Track', 'This is a test email.');
-                                        },
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              Icons.mail,
-                                              color: AppStyles.cutstomIconColor,
+                                Padding(
+                                  padding: const EdgeInsets.all(10.0),
+                                  child: Container(
+                                    height: 500,
+                                    child: ListView.builder(
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
+                                      padding: EdgeInsets.zero, // Remove padding
+                                      itemCount: items.length,
+                                      itemBuilder: (context, index) {
+                                        return Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: ListTile(
+                                            contentPadding: EdgeInsets.zero,
+                                            // leading: CircleAvatar(
+                                            //   child: Image.asset(
+                                            //     items[index]['image'],
+                                            //     width: 20,
+                                            //     color: Colors.white,
+                                            //     fit: BoxFit.fitWidth,
+                                            //   ),
+                                            //   backgroundColor: AppStyles.cutstomIconColor,
+                                            //   radius: 30, // Adjust radius for avatar
+                                            // ),
+                                            leading: Container(
+                                              decoration: const BoxDecoration(
+                                                shape: BoxShape
+                                                    .circle, // Ensure it's circular
+                                                gradient: LinearGradient(
+                                                  colors: [
+                                                    Color(0xFFFA7365),
+                                                    Color(0xFF9A4DFF)
+                                                  ],
+                                                  begin: Alignment
+                                                      .topLeft, // Change direction as needed
+                                                  end: Alignment.bottomRight,
+                                                ),
+                                              ),
+                                              child: CircleAvatar(
+                                                backgroundColor: Colors
+                                                    .transparent, // Make background transparent
+                                                child: Image.asset(
+                                                    items[index]['image'],
+                                                    width: 20,
+                                                    height: 20,
+                                                    color: Colors.white,
+                                                    fit: BoxFit.fitHeight),
+                                                radius:
+                                                    30, // Adjust radius for avatar
+                                              ),
                                             ),
-                                            SizedBox(
-                                              width: 5,
-                                            ),
-                                            Text(
-                                              "gastrack.india@gmail.com",
+        
+                                            title: Text(
+                                              items[index]['name'],
                                               style: AppStyles.customTextStyle(
-                                                  fontSize: 14.0,
-                                                  fontWeight: FontWeight.w400),
+                                                fontSize: 14.0,
+                                                fontWeight: FontWeight.w400,
+                                              ),
                                             ),
-                                          ],
+                                            trailing: items[index]['toggle']
+                                                ? Switch(
+                                                    // Display Switch when toggle is true
+                                                    value: items[index]['toggle'],
+                                                    onChanged: (value) {
+                                                      setState(() {
+                                                        items[index]['toggle'] =
+                                                            value;
+                                                      });
+                                                    },
+                                                    activeTrackColor: AppStyles
+                                                        .cutstomIconColor,
+                                                  )
+                                                : const Icon(Icons
+                                                    .chevron_right), // Display Icon when toggle is false
+                                            onTap: () {
+                                              _handleMenuItemTap(
+                                                  context, items[index]['name']);
+                                            },
+                                          ),
+                                        );
+                                      },
+                                    ),
+        
+                                    // ListView.builder(
+                                    //   physics:
+                                    //       const NeverScrollableScrollPhysics(),
+                                    //   padding: EdgeInsets.zero, // Remove padding
+                                    //   itemCount: items.length,
+                                    //   itemBuilder: (context, index) {
+                                    //     return Padding(
+                                    //       padding: const EdgeInsets.all(8.0),
+                                    //       child: ListTile(
+                                    //         contentPadding: EdgeInsets.zero,
+                                    //         leading: CircleAvatar(
+                                    //           child: Image.asset(
+                                    //             items[index]['image'],
+                                    //             width: 20,
+                                    //             color: Colors.white,
+                                    //             fit: BoxFit.fitWidth,
+                                    //           ),
+                                    //           backgroundColor:
+                                    //               AppStyles.cutstomIconColor,
+                                    //           radius:
+                                    //               30, // Adjust radius for avatar
+                                    //         ),
+                                    //         title: Text(
+                                    //           items[index]['name'],
+                                    //           style: AppStyles.customTextStyle(
+                                    //               fontSize: 14.0,
+                                    //               fontWeight: FontWeight.w400),
+                                    //         ),
+                                    //         trailing: Row(
+                                    //           mainAxisSize: MainAxisSize.min,
+                                    //           children: [
+                                    //             if (items[index][
+                                    //                 'toggle']) // Toggle button for specific items
+                                    //               Switch(
+                                    //                 value: items[index]['toggle'],
+                                    //                 onChanged: (value) {
+                                    //                   setState(() {
+                                    //                     items[index]['toggle'] =
+                                    //                         value;
+                                    //                   });
+                                    //                 },
+                                    //               ),
+                                    //             const Icon(Icons.chevron_right),
+                                    //           ],
+                                    //         ),
+                                    //         onTap: () {
+                                    //           _handleMenuItemTap(
+                                    //               context, items[index]['name']);
+                                    //         },
+                                    //       ),
+                                    //     );
+                                    //   },
+                                    // ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 20.0, top: 10),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "Contact Us",
+                                        style: AppStyles.customTextStyle(
+                                            fontSize: 15.0,
+                                            fontWeight: FontWeight.w500),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 8.0),
+                                        child: InkWell(
+                                          onTap: () {
+
+                                            _sendEmail('gastrack.india@gmail.com',
+                                                'Hello from Gas Track',
+                                                'This is a test email.');
+                                            // _launchEmail(
+                                            //     'gastrack.india@gmail.com',
+                                            //     'Hello from Gas Track',
+                                            //     'This is a test email.');
+                                          },
+                                          child: Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.mail,
+                                                color: AppStyles.cutstomIconColor,
+                                              ),
+                                              const SizedBox(
+                                                width: 5,
+                                              ),
+                                              Text(
+                                                "gastrack.india@gmail.com",
+                                                style: AppStyles.customTextStyle(
+                                                    fontSize: 14.0,
+                                                    fontWeight: FontWeight.w400),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          )),
+                                const SizedBox(
+                                  height: 20,
+                                ),
+                                Center(
+                                  child: InkWell(
+                                    onTap: () async {
+                                    await UserPreferences().clearUserData();
+
+                                      // final prefs = await SharedPreferences.getInstance();
+                                      // await prefs.clear(); // Clear user session or token
+                                      Navigator.pushAndRemoveUntil(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => const LoginScreen(), // Navigate to LoginScreen
+                                        ),
+                                            (route) => false, // Remove all previous routes
+                                      );
+                                    },
+                                    child: Container(
+                                      width: 250,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [
+                                            Color(0xFFFA7365), // Gradient start color
+                                            Color(0xFF9A4DFF), // Gradient end color
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                        borderRadius: BorderRadius.circular(25), // Rounded corners
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.2),
+                                            blurRadius: 8,
+                                            offset: const Offset(2, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.logout, // Logout icon
+                                            color: Colors.white,
+                                          ),
+                                          SizedBox(width: 10), // Space between icon and text
+                                          Text(
+                                            "Logout",
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                const SizedBox(
+                                  height: 20,
+                                ),
+                              ],
+                            )),
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -397,7 +491,7 @@ class _MenuScreenState extends State<MenuScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => EditProfile(),
+            builder: (context) => const EditProfile(),
           ),
         );
         break;
@@ -406,7 +500,7 @@ class _MenuScreenState extends State<MenuScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => CylinderDetailScreen(),
+            builder: (context) => const CylinderDetailScreen(),
           ),
         );
         break;
@@ -425,7 +519,7 @@ class _MenuScreenState extends State<MenuScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => FirmwareUpdate(),
+            builder: (context) => const FirmwareUpdate(),
           ),
         );
         break;
@@ -484,8 +578,6 @@ class TopRoundedRectangleClipper extends CustomClipper<Path> {
   bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
 
-
-
 void showCustomDialogRest(BuildContext context) {
   showDialog(
     context: context,
@@ -495,7 +587,7 @@ void showCustomDialogRest(BuildContext context) {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Container(
-          padding: EdgeInsets.all(20),
+          padding: const EdgeInsets.all(20),
           height: 300,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
@@ -510,7 +602,7 @@ void showCustomDialogRest(BuildContext context) {
                 },
                 child: Container(
                   width: double.infinity,
-                  child: Align(
+                  child: const Align(
                     alignment: Alignment.centerRight,
                     child: Icon(
                       Icons.cancel,
@@ -520,7 +612,7 @@ void showCustomDialogRest(BuildContext context) {
                   ),
                 ),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               // Name
               Container(
                 // Optional: Add padding or margin if needed
@@ -531,12 +623,12 @@ void showCustomDialogRest(BuildContext context) {
                     style: AppStyles.customTextStyle(
                         fontSize: 22.0, fontWeight: FontWeight.w700),
                     textAlign:
-                    TextAlign.center, // Center the text if it's multiline
+                        TextAlign.center, // Center the text if it's multiline
                   ),
                 ),
               ),
 
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               Container(
                 // Optional: Add padding or margin if needed
                 // padding: EdgeInsets.all(10), // Adds some padding around the text
@@ -546,11 +638,11 @@ void showCustomDialogRest(BuildContext context) {
                     style: AppStyles.customTextStyle(
                         fontSize: 13.0, fontWeight: FontWeight.w400),
                     textAlign:
-                    TextAlign.center, // Center the text if it's multiline
+                        TextAlign.center, // Center the text if it's multiline
                   ),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               // Done Button
 
               // SizedBox(
@@ -731,11 +823,11 @@ void showCustomDialogRest(BuildContext context) {
                   buttonColor: blendWithWhite(AppStyles.cutstomIconColor, 0.3),
                   // backgroundColor: AppStyles.cutstomIconColor,
                   dismissible: false,
-                  label: Center(
+                  label: const Center(
                       child: Icon(
-                        Icons.recycling,
-                        color: Colors.white,
-                      )),
+                    Icons.recycling,
+                    color: Colors.white,
+                  )),
                   initialPosition: SlidableButtonPosition
                       .center, // Set the initial position to middle
                   child: Padding(
@@ -747,17 +839,17 @@ void showCustomDialogRest(BuildContext context) {
                           child: RichText(
                             text: TextSpan(
                               text:
-                              'Calibrate', // This is the first part of the text
+                                  'Calibrate', // This is the first part of the text
                               style: AppStyles.customTextStyle(
                                 fontSize: 13.0,
                                 fontWeight: FontWeight.w400,
                               ),
                               children: <InlineSpan>[
-                                WidgetSpan(
+                                const WidgetSpan(
                                   alignment: PlaceholderAlignment.middle,
                                   child: SizedBox(
                                     width:
-                                    10, // Adjust this value to reduce spacing
+                                        10, // Adjust this value to reduce spacing
                                     child: Icon(
                                       Icons.chevron_left,
                                       color: Colors.white,
@@ -769,7 +861,7 @@ void showCustomDialogRest(BuildContext context) {
                                   alignment: PlaceholderAlignment.middle,
                                   child: SizedBox(
                                     width:
-                                    10, // Adjust this value to reduce spacing
+                                        10, // Adjust this value to reduce spacing
                                     child: Icon(
                                       Icons.chevron_left,
                                       color: Colors.white.withOpacity(.8),
@@ -781,7 +873,7 @@ void showCustomDialogRest(BuildContext context) {
                                   alignment: PlaceholderAlignment.middle,
                                   child: SizedBox(
                                     width:
-                                    10, // Adjust this value to reduce spacing
+                                        10, // Adjust this value to reduce spacing
                                     child: Icon(
                                       Icons.chevron_left,
                                       color: Colors.white.withOpacity(.6),
@@ -802,7 +894,7 @@ void showCustomDialogRest(BuildContext context) {
                                   alignment: PlaceholderAlignment.middle,
                                   child: SizedBox(
                                     width:
-                                    10, // Adjust this value to reduce spacing
+                                        10, // Adjust this value to reduce spacing
                                     child: Icon(
                                       Icons.chevron_right,
                                       color: Colors.white.withOpacity(.6),
@@ -814,7 +906,7 @@ void showCustomDialogRest(BuildContext context) {
                                   alignment: PlaceholderAlignment.middle,
                                   child: SizedBox(
                                     width:
-                                    10, // Adjust this value to reduce spacing
+                                        10, // Adjust this value to reduce spacing
                                     child: Icon(
                                       Icons.chevron_right,
                                       color: Colors.white.withOpacity(.8),
@@ -822,11 +914,11 @@ void showCustomDialogRest(BuildContext context) {
                                     ),
                                   ),
                                 ),
-                                WidgetSpan(
+                                const WidgetSpan(
                                   alignment: PlaceholderAlignment.middle,
                                   child: SizedBox(
                                     width:
-                                    10, // Adjust this value to reduce spacing
+                                        10, // Adjust this value to reduce spacing
                                     child: Icon(
                                       Icons.chevron_right,
                                       color: Colors.white,
@@ -836,7 +928,7 @@ void showCustomDialogRest(BuildContext context) {
                                 ),
                                 TextSpan(
                                   text:
-                                  '           Reset', // This is the first part of the text
+                                      '           Reset', // This is the first part of the text
                                   style: AppStyles.customTextStyle(
                                     fontSize: 13.0,
                                     fontWeight: FontWeight.w400,
@@ -902,7 +994,7 @@ void showCustomDialog(BuildContext context) {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Container(
-          padding: EdgeInsets.all(20),
+          padding: const EdgeInsets.all(20),
           height: 350,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
@@ -917,7 +1009,7 @@ void showCustomDialog(BuildContext context) {
                 },
                 child: Container(
                   width: double.infinity,
-                  child: Align(
+                  child: const Align(
                     alignment: Alignment.centerRight,
                     child: Icon(
                       Icons.cancel,
@@ -927,7 +1019,7 @@ void showCustomDialog(BuildContext context) {
                   ),
                 ),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               // Name
               Container(
                 // Optional: Add padding or margin if needed
@@ -938,12 +1030,12 @@ void showCustomDialog(BuildContext context) {
                     style: AppStyles.customTextStyle(
                         fontSize: 22.0, fontWeight: FontWeight.w700),
                     textAlign:
-                    TextAlign.center, // Center the text if it's multiline
+                        TextAlign.center, // Center the text if it's multiline
                   ),
                 ),
               ),
 
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               Container(
                 // Optional: Add padding or margin if needed
                 // padding: EdgeInsets.all(10), // Adds some padding around the text
@@ -953,11 +1045,11 @@ void showCustomDialog(BuildContext context) {
                     style: AppStyles.customTextStyle(
                         fontSize: 13.0, fontWeight: FontWeight.w400),
                     textAlign:
-                    TextAlign.center, // Center the text if it's multiline
+                        TextAlign.center, // Center the text if it's multiline
                   ),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               // Done Button
               SizedBox(
                 width: 300,
@@ -973,7 +1065,7 @@ void showCustomDialog(BuildContext context) {
                   label: RichText(
                     text: TextSpan(
                       text:
-                      'Delete Device       ', // This is the first part of the text
+                          'Delete Device       ', // This is the first part of the text
                       style: AppStyles.customTextStyle(
                         fontSize: 13.0,
                         fontWeight: FontWeight.w400,
@@ -1012,7 +1104,7 @@ void showCustomDialog(BuildContext context) {
                             ),
                           ),
                         ),
-                        WidgetSpan(
+                        const WidgetSpan(
                           alignment: PlaceholderAlignment.middle,
                           child: SizedBox(
                             width: 10, // Adjust this value to reduce spacing
@@ -1035,8 +1127,8 @@ void showCustomDialog(BuildContext context) {
                   // ),
 
                   // Icon for the slider button
-                  icon: Padding(
-                    padding: const EdgeInsets.all(8.0),
+                  icon: const Padding(
+                    padding: EdgeInsets.all(8.0),
                     child: Center(
                       child: Icon(
                         Icons.delete_rounded,

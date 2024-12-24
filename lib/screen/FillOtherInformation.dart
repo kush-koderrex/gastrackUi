@@ -12,6 +12,10 @@ class FullOtherInformation extends StatefulWidget {
 }
 
 class _FullOtherInformationState extends State<FullOtherInformation> {
+
+
+
+
   final _formKey = GlobalKey<FormState>();
 
   final _deviceNameController = TextEditingController(text: Utils.device.platformName);

@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:gas_track_ui/Services/FirebaseSevice.dart';
+import 'dart:developer' as developer;
+
 
 class _BarChart extends StatelessWidget {
   final List<BarChartGroupData> barGroups;
@@ -58,21 +60,21 @@ class _BarChart extends StatelessWidget {
   }
 
   BarTouchData get barTouchData => BarTouchData(
-    enabled: false,
-    touchTooltipData: BarTouchTooltipData(
-      tooltipPadding: EdgeInsets.zero,
-      tooltipMargin: 8,
-      getTooltipItem: (group, groupIndex, rod, rodIndex) {
-        return BarTooltipItem(
-          rod.toY.round().toString(),
-          const TextStyle(
-            color: Colors.cyan,
-            fontWeight: FontWeight.bold,
-          ),
-        );
-      },
-    ),
-  );
+        enabled: false,
+        touchTooltipData: BarTouchTooltipData(
+          tooltipPadding: EdgeInsets.zero,
+          tooltipMargin: 8,
+          getTooltipItem: (group, groupIndex, rod, rodIndex) {
+            return BarTooltipItem(
+              rod.toY.round().toString(),
+              const TextStyle(
+                color: Colors.cyan,
+                fontWeight: FontWeight.bold,
+              ),
+            );
+          },
+        ),
+      );
 
   static Widget getYTitles(double value, TitleMeta meta) {
     const style = TextStyle(
@@ -82,20 +84,20 @@ class _BarChart extends StatelessWidget {
     );
     return value % 10 == 0
         ? SideTitleWidget(
-      axisSide: meta.axisSide,
-      space: 6,
-      child: Text(value.toInt().toString(), style: style),
-    )
+            axisSide: meta.axisSide,
+            space: 6,
+            child: Text(value.toInt().toString(), style: style),
+          )
         : Container();
   }
 
   static FlBorderData get borderData => FlBorderData(show: false);
 
   static LinearGradient get _barsGradient => const LinearGradient(
-    colors: [Color(0xFFC54239), Color(0xFF7A2AAE)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+        colors: [Color(0xFFC54239), Color(0xFF7A2AAE)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
 
   static List<BarChartGroupData> generateBarGroups(List<double> values) {
     return List.generate(values.length, (index) {
@@ -112,7 +114,8 @@ class _BarChart extends StatelessWidget {
     });
   }
 
-  static SideTitleWidget Function(double value, TitleMeta meta) getDynamicXTitles(List<String> labels) {
+  static SideTitleWidget Function(double value, TitleMeta meta)
+      getDynamicXTitles(List<String> labels) {
     return (double value, TitleMeta meta) {
       const style = TextStyle(color: Colors.black, fontSize: 12);
       int index = value.toInt();
@@ -123,72 +126,6 @@ class _BarChart extends StatelessWidget {
     };
   }
 }
-
-// class DayGraph extends StatefulWidget {
-//   final String customerId;
-//
-//   const DayGraph({super.key, required this.customerId});
-//
-//   @override
-//   _DayGraphState createState() => _DayGraphState();
-// }
-//
-// class _DayGraphState extends State<DayGraph> {
-//   List<double> dailyValues = [];
-//
-//   @override
-//   void initState() {
-//     super.initState();
-//     fetchDailyData();
-//   }
-//
-//   List<double> calculateDailyAverages(List<Map<String, dynamic>> readings) {
-//     Map<int, List<double>> hourlyData = {};
-//
-//     for (var reading in readings) {
-//       DateTime date = (reading['reading_date'] as Timestamp).toDate();
-//       int hour = date.hour;
-//       double remainGas = double.tryParse(reading['remainGas']) ?? 0;
-//
-//       hourlyData.putIfAbsent(hour, () => []).add(remainGas);
-//     }
-//
-//     List<double> averages = [];
-//     for (int i = 0; i < 24; i += 4) {
-//       double sum = 0;
-//       int count = 0;
-//
-//       for (int j = i; j < i + 4; j++) {
-//         if (hourlyData.containsKey(j)) {
-//           sum += hourlyData[j]!.reduce((a, b) => a + b);
-//           count += hourlyData[j]!.length;
-//         }
-//       }
-//       averages.add(count > 0 ? sum / count : 0);
-//     }
-//     return averages;
-//   }
-//
-//   Future<void> fetchDailyData() async {
-//     FirestoreService service = FirestoreService();
-//     List<Map<String, dynamic>> readings = await service.getGasReadings(widget.customerId);
-//     setState(() {
-//       dailyValues = calculateDailyAverages(readings);
-//     });
-//   }
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return dailyValues.isEmpty
-//         ? const Center(child: CircularProgressIndicator())
-//         : _BarChart(
-//       barGroups: _BarChart.generateBarGroups(dailyValues),
-//       getXTitles: _BarChart.getDynamicXTitles(['12-4', '4-8', '8-12', '12-16', '16-20', '20-24']),
-//       maxY: 100,
-//     );
-//   }
-// }
-
 
 class DayGraph extends StatefulWidget {
   final String customerId;
@@ -206,19 +143,23 @@ class _DayGraphState extends State<DayGraph> {
   void initState() {
     super.initState();
     fetchDailyData();
+
   }
 
   List<double> calculateDailyAverages(List<Map<String, dynamic>> readings) {
     DateTime now = DateTime.now();
 
     // Group readings by 4-hour intervals
-    Map<int, List<double>> intervalData = {}; // Key: Interval (0-5), Value: Gas readings
+    Map<int, List<double>> intervalData =
+        {}; // Key: Interval (0-5), Value: Gas readings
 
     for (var reading in readings) {
       DateTime date = (reading['reading_date'] as Timestamp).toDate();
 
       // Filter readings for today only
-      if (date.year == now.year && date.month == now.month && date.day == now.day) {
+      if (date.year == now.year &&
+          date.month == now.month &&
+          date.day == now.day) {
         int hour = date.hour; // Hour of the day (0-23)
 
         // Determine 4-hour interval: 0-3, 4-7, 8-11, ..., 20-23
@@ -243,10 +184,13 @@ class _DayGraphState extends State<DayGraph> {
 
   Future<void> fetchDailyData() async {
     FirestoreService service = FirestoreService();
-    List<Map<String, dynamic>> readings = await service.getGasReadings(widget.customerId);
+    List<Map<String, dynamic>> readings =
+        await service.getGasReadings(widget.customerId);
 
     setState(() {
       dailyValues = calculateDailyAverages(readings);
+      print("dailyValues");
+      print(dailyValues);
     });
   }
 
@@ -255,15 +199,14 @@ class _DayGraphState extends State<DayGraph> {
     return dailyValues.isEmpty
         ? const Center(child: CircularProgressIndicator())
         : _BarChart(
-      barGroups: _BarChart.generateBarGroups(dailyValues),
-      getXTitles: _BarChart.getDynamicXTitles(
-        ['12-4 AM', '4-8 AM', '8-12 PM', '12-4 PM', '4-8 PM', '8-12 AM'],
-      ),
-      maxY: 100,
-    );
+            barGroups: _BarChart.generateBarGroups(dailyValues),
+            getXTitles: _BarChart.getDynamicXTitles(
+              ['12-4 AM', '4-8 AM', '8-12 PM', '12-4 PM', '4-8 PM', '8-12 AM'],
+            ),
+            maxY: 100,
+          );
   }
 }
-
 
 class WeeklyGraph extends StatefulWidget {
   final String customerId;
@@ -316,10 +259,19 @@ class _WeeklyGraphState extends State<WeeklyGraph> {
 
   Future<void> fetchWeeklyData() async {
     FirestoreService service = FirestoreService();
-    List<Map<String, dynamic>> readings = await service.getGasReadings(widget.customerId);
+    List<Map<String, dynamic>> readings =
+        await service.getGasReadings(widget.customerId);
+    // print("readings");
+    //
+    // int usageDays = UsageCalculator.calculateUsageDays(readings);
+    // print('Total days of usage: $usageDays');
+
+    developer.log(readings.toString());
 
     setState(() {
       weeklyValues = calculatePastWeekAverages(readings);
+      print("weeklyValues");
+      print(weeklyValues);
     });
   }
 
@@ -328,17 +280,14 @@ class _WeeklyGraphState extends State<WeeklyGraph> {
     return weeklyValues.isEmpty
         ? const Center(child: CircularProgressIndicator())
         : _BarChart(
-      barGroups: _BarChart.generateBarGroups(weeklyValues),
-      getXTitles: _BarChart.getDynamicXTitles(
-        ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-      ),
-      maxY: 100,
-    );
+            barGroups: _BarChart.generateBarGroups(weeklyValues),
+            getXTitles: _BarChart.getDynamicXTitles(
+              ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            ),
+            maxY: 100,
+          );
   }
 }
-
-
-
 
 // class WeeklyGraph extends StatefulWidget {
 //   final String customerId;
@@ -446,7 +395,7 @@ class _MonthGraphState extends State<MonthGraph> {
   Future<void> fetchMonthlyData() async {
     FirestoreService service = FirestoreService();
     List<Map<String, dynamic>> readings =
-    await service.getGasReadings(widget.customerId);
+        await service.getGasReadings(widget.customerId);
 
     setState(() {
       monthlyAverages = calculateMonthlyAverages(readings);
@@ -458,31 +407,27 @@ class _MonthGraphState extends State<MonthGraph> {
     return monthlyAverages.isEmpty
         ? const Center(child: CircularProgressIndicator())
         : _BarChart(
-      barGroups: _BarChart.generateBarGroups(monthlyAverages),
-      getXTitles: _BarChart.getDynamicXTitles(
-        [
-          'Jan',
-          'Feb',
-          'Mar',
-          'Apr',
-          'May',
-          'Jun',
-          'Jul',
-          'Aug',
-          'Sep',
-          'Oct',
-          'Nov',
-          'Dec'
-        ],
-      ),
-      maxY: 100,
-    );
+            barGroups: _BarChart.generateBarGroups(monthlyAverages),
+            getXTitles: _BarChart.getDynamicXTitles(
+              [
+                'Jan',
+                'Feb',
+                'Mar',
+                'Apr',
+                'May',
+                'Jun',
+                'Jul',
+                'Aug',
+                'Sep',
+                'Oct',
+                'Nov',
+                'Dec'
+              ],
+            ),
+            maxY: 100,
+          );
   }
-
-
 }
-
-
 
 // import 'package:cloud_firestore/cloud_firestore.dart';
 // import 'package:fl_chart/fl_chart.dart';

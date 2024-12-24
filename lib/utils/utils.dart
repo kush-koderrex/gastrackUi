@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:gas_track_ui/utils/snackbar.dart';
 import 'package:gas_track_ui/utils/widgets.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:developer' as developer;
 
 
@@ -63,15 +64,26 @@ class Utils {
   static String weight = "0";
   static String days = "0";
   static String battery = "0";
+  static bool critical_flag =false;
   static String remainGas = "0";
+  //
+  // static String serviceUUID = "9999";
+  // static String writeCharacteristicUUID = "9191";
+  // static String readCharacteristicUUID = "8888";
 
-  static String serviceUUID = "9999";
-  static String writeCharacteristicUUID = "9191";
-  static String readCharacteristicUUID = "8888";
+  late SharedPreferences prefs;
+
+  static String serviceUUID = "f000c0c0-0451-4000-b000-000000000000";
+  static String writeCharacteristicUUID = "f000c0c1-0451-4000-b000-000000000000";
+  static String readCharacteristicUUID = "f000c0c2-0451-4000-b000-000000000000";
+
 
   static String DeviiceName = "";
 
+
+
   static String cusUuid = "";
+
 
   static Future<void> onSubscribePressed(BluetoothCharacteristic characteristic) async {
     try {

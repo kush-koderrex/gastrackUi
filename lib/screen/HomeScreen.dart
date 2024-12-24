@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:gas_track_ui/BackGroundService.dart';
+import 'package:gas_track_ui/LocalStorage.dart';
 import 'package:gas_track_ui/Services/FirebaseSevice.dart';
 import 'package:gas_track_ui/permissions/bluetooth_off_screen.dart';
+import 'package:gas_track_ui/screen/AddManuallyDevice.dart';
 import 'package:gas_track_ui/screen/CylinderDetailScreen.dart';
 import 'package:gas_track_ui/screen/MenuScreen.dart';
 import 'package:gas_track_ui/utils/snackbar.dart';
@@ -60,6 +63,36 @@ class Homescreen extends StatefulWidget {
 }
 
 class _HomescreenState extends State<Homescreen> {
+
+
+
+
+  static const platform = MethodChannel('com.example.gas_track_ui/gtrack_process');
+  String _statusMessage = '';
+  String _logContent = '';
+  // String name = widget.deviceInfo;
+  // final TextEditingController _controller1 = TextEditingController(text: widget.deviceInfo);
+  final TextEditingController _controller2 = TextEditingController(text: "15");
+
+  Future<void> _launchTask() async {
+    print("Background Service");
+    String result;
+    await requestPermissions();
+    try {
+      final value = "BLE Device";
+      final duration= int.parse(_controller2.text);
+      result = await platform.invokeMethod('launchPeriodicTask', {'device': value,'duration':duration});
+    } on PlatformException catch (e) {
+      result = "Failed to launch task: '${e.message}'.";
+    }
+
+    setState(() {
+      _statusMessage = result;
+    });
+  }
+
+
+
   // test
 
   List<ScanResult> _scanResults = [];
@@ -116,6 +149,16 @@ class _HomescreenState extends State<Homescreen> {
   @override
   void initState() {
     // TODO: implement initState
+    _launchTask();
+    getdaysofuse();
+    // startBLETask(
+    //   deviceName: "MyBLEDevice",
+    //   duration: 15,
+    //   serviceUUID: "f000c0c0-0451-4000-b000-000000000000",
+    //   characteristicUUID: "f000c0c1-0451-4000-b000-000000000000",
+    //   readCharacteristicUUID: "f000c0c2-0451-4000-b000-000000000000",
+    //   customerId: "customer123",
+    // );
     DateTime now = DateTime.now();
     formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
     checkBluetoothState();
@@ -149,6 +192,7 @@ class _HomescreenState extends State<Homescreen> {
   bool isConnected = false;
   bool isSubscribe = false;
   bool isGetData = false;
+  FirestoreService service = FirestoreService();
 
   Future GetData() async {
     print("Searched Device");
@@ -195,7 +239,7 @@ class _HomescreenState extends State<Homescreen> {
       Utils.onSubscribePressed(Utils.Readcharacteristic);
       Utils.subscribeToCharacteristic(Utils.Readcharacteristic);
 
-      print("Remote:-$Utils.{Writecharacteristic.remoteId}");
+      print("Remote:-${Utils.Writecharacteristic.remoteId}");
       print("serviceUuid:-${Utils.Writecharacteristic.serviceUuid}");
       print(
           "characteristicUuid:-${Utils.Writecharacteristic.characteristicUuid}");
@@ -231,24 +275,26 @@ class _HomescreenState extends State<Homescreen> {
           // print(_deviceResponse?.battery.toString());
           setState(() {
             Utils.battery = "${_deviceResponse?.battery.toString()}";
-            Utils.weight =
-                "${_deviceResponse?.beforeDecimal}.${_deviceResponse?.afterDecimal}";
+            Utils.weight = "${_deviceResponse?.beforeDecimal}.${_deviceResponse?.afterDecimal}";
             Utils.remainGas =
                 Utils.calculateGasPercentage(double.parse(Utils.weight))
                     .toStringAsFixed(0);
+            Utils.critical_flag = _deviceResponse!.critical;
           });
 
           print("battery:-${_deviceResponse?.battery.toString()}");
           print("RemainGas:-${Utils.remainGas}");
-          print(
-              "weight:-${_deviceResponse?.beforeDecimal}.${_deviceResponse?.afterDecimal}");
+          print("weight:-${_deviceResponse?.beforeDecimal}.${_deviceResponse?.afterDecimal}");
+          print("criticalFlag:-${_deviceResponse?.critical}}");
+          var userData = await UserPreferences().getUserData();
 
           await FirestoreService().updateGasReadings(
-            customerId: Utils.cusUuid,  // Use appropriate customer_id
+            customerId: Utils.cusUuid == null ? userData["email"]! : Utils.cusUuid, // Use appropriate customer_id
             remainGas: Utils.remainGas,
             weight: Utils.weight,
             battery: Utils.battery,
-            criticalFlag: false,
+            // criticalFlag: false,
+            criticalFlag: Utils.critical_flag,
             readingDate: DateTime.now(),
           );
 
@@ -274,7 +320,54 @@ class _HomescreenState extends State<Homescreen> {
 
   Future<void> _refreshData() async {
     GetData();
+    getdaysofuse();
+
   }
+
+  // Future<void> getdaysofuse() async {
+  //   var userData = await UserPreferences().getUserData();
+  //   var id= (Utils.cusUuid != null && Utils.cusUuid.isNotEmpty ) ? userData["email"]! : Utils.cusUuid;
+  //   print("id");
+  //   print(id.isEmpty);
+  //   print(id);
+  //   print(Utils.cusUuid);
+  //   print(userData["email"]);
+  //
+  //
+  //   // List<Map<String, dynamic>> readings = await service.getGasReadings(Utils.cusUuid);
+  //   List<Map<String, dynamic>> readings = await service.getGasReadings(id);
+  //
+  //   int usageDays = calculateUsageDays(readings);
+  //
+  //   print('Usage days (${id}): $usageDays');
+  //   print(id);
+  //   setState(() {
+  //     Utils.days =usageDays.toString();
+  //   });
+  //   developer.log(readings.toString());
+  // }
+
+  Future<void> getdaysofuse() async {
+    var userData = await UserPreferences().getUserData();
+
+    // Check if Utils.cusUuid is not null and not empty; otherwise, use userData["email"]
+    var id = (Utils.cusUuid.isNotEmpty) ? Utils.cusUuid : userData["email"]!;
+    // Use the resolved id for your service call
+    List<Map<String, dynamic>> readings = await service.getGasReadings(id);
+
+    int usageDays = calculateUsageDays(readings);
+
+    print('Usage days (${id}): $usageDays');
+    print(id);
+
+    setState(() {
+      Utils.days = usageDays.toString();
+    });
+
+    developer.log(readings.toString());
+  }
+
+
 
   DeviceResponse? parseDeviceResponse(String response) {
     // Ensure the response is in uppercase
@@ -296,7 +389,7 @@ class _HomescreenState extends State<Homescreen> {
       String afterDecimal = response.substring(12, 14);
       String battery = response.substring(14, 16);
       bool buzzer = response.substring(16, 18) == '00';
-      bool critical = response.substring(18, 20) == '00';
+      bool critical = response.substring(18, 20) == '10';
       String checksum = response.substring(20, 24); // 2 bytes -> 4 hex digits
 
       return DeviceResponse(
@@ -329,8 +422,8 @@ class _HomescreenState extends State<Homescreen> {
           child: GestureDetector(
             onTap: () {
               // Add navigation or action on image tap here
-              Navigator.of(context)
-                  .pop(); // For example, this will pop the current screen
+              // Navigator.of(context)
+              //     .pop(); // For example, this will pop the current screen
             },
             child: Padding(
               padding: const EdgeInsets.only(left: 8.0, top: 8.0),
@@ -349,7 +442,7 @@ class _HomescreenState extends State<Homescreen> {
               height: 5,
             ),
             Text(
-              "Kitchen Cylinder",
+              "${Utils.device.platformName}",
               style: AppStyles.customTextStyle(
                   fontSize: 18.0, fontWeight: FontWeight.w500),
             ),
@@ -360,30 +453,54 @@ class _HomescreenState extends State<Homescreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 (isConnected == true)
-                    ? Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          shape: BoxShape.circle,
+                    ? Row(
+                      children: [
+                        Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        SizedBox(width: 10,),
+                        Text(
+                          "Connected",
+                          style: AppStyles.customTextStyle(
+                              fontSize: 13.0, fontWeight: FontWeight.w400),
                         ),
-                      )
-                    : Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                  ),
+                      ],
+                    )
+                    : Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    SizedBox(width: 10,),
+                    Text(
+                      "DisConnected",
+                      style: AppStyles.customTextStyle(
+                          fontSize: 13.0, fontWeight: FontWeight.w400),
+                    ),
+                  ],
                 ),
+                // Container(
+                //   width: 6,
+                //   height: 6,
+                //   decoration: BoxDecoration(
+                //     color: Colors.red,
+                //     shape: BoxShape.circle,
+                //   ),
+                // ),
                 SizedBox(
                   width: 10,
                 ),
-                Text(
-                  "Connected",
-                  style: AppStyles.customTextStyle(
-                      fontSize: 13.0, fontWeight: FontWeight.w400),
-                ),
+
               ],
             ),
           ],
@@ -652,56 +769,62 @@ class _HomescreenState extends State<Homescreen> {
                                                   Expanded(
                                                     child: Column(
                                                       children: [
-                                                        Card(
-                                                          // elevation: 5,
-                                                          child: Container(
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .all(
-                                                                    12), // Padding inside the container
-                                                            decoration:
-                                                                BoxDecoration(
-                                                              color:
-                                                                  Colors.white,
-                                                              borderRadius:
-                                                                  BorderRadius
-                                                                      .circular(
-                                                                          12), // Rounded edges for the container
-                                                            ),
-                                                            child: Row(
-                                                              mainAxisAlignment:
-                                                                  MainAxisAlignment
-                                                                      .center, // Center contents inside the container
-                                                              children: [
-                                                                CircleAvatar(
-                                                                  radius:
-                                                                      22, // Size of the avatar
-                                                                  backgroundColor:
-                                                                      Color(
-                                                                          0xF2913189),
-                                                                  child:
-                                                                      SvgPicture
-                                                                          .asset(
-                                                                    'assets/images/svg/calendar.svg', // Path to your SVG asset
-                                                                    width: 20,
-                                                                    height: 20,
-                                                                    color: Colors
-                                                                        .white,
-                                                                  ), // Icon inside avatar
-                                                                ),
-                                                                const SizedBox(
-                                                                    width:
-                                                                        8), // Space between avatar and text
-                                                                Text(
-                                                                  Utils.days,
-                                                                  style: AppStyles.customTextStyle(
-                                                                      fontSize:
-                                                                          15.0,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .w500),
-                                                                ),
-                                                              ],
+                                                        InkWell(
+                                                          onTap: (){
+                                                            getdaysofuse();
+                                                          },
+                                                          child: Card(
+                                                            // elevation: 5,
+                                                            child: Container(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .all(
+                                                                      12), // Padding inside the container
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                color:
+                                                                    Colors.white,
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                            12), // Rounded edges for the container
+                                                              ),
+                                                              child: Row(
+                                                                mainAxisAlignment:
+                                                                    MainAxisAlignment
+                                                                        .center, // Center contents inside the container
+                                                                children: [
+                                                                  CircleAvatar(
+                                                                    radius:
+                                                                        22, // Size of the avatar
+                                                                    backgroundColor:
+                                                                        Color(
+                                                                            0xF2913189),
+                                                                    child:
+                                                                        SvgPicture
+                                                                            .asset(
+                                                                      'assets/images/svg/calendar.svg', // Path to your SVG asset
+                                                                      width: 20,
+                                                                      height: 20,
+                                                                      color: Colors
+                                                                          .white,
+                                                                    ), // Icon inside avatar
+                                                                  ),
+                                                                  const SizedBox(
+                                                                      width:
+                                                                          8), // Space between avatar and text
+                                                                  Text(
+                                                                    Utils.days,
+                                                                    // Utils.days,
+                                                                    style: AppStyles.customTextStyle(
+                                                                        fontSize:
+                                                                            15.0,
+                                                                        fontWeight:
+                                                                            FontWeight
+                                                                                .w500),
+                                                                  ),
+                                                                ],
+                                                              ),
                                                             ),
                                                           ),
                                                         ),
