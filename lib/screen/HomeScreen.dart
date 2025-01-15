@@ -6,6 +6,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gas_track_ui/BackGroundService.dart';
 import 'package:gas_track_ui/LocalStorage.dart';
 import 'package:gas_track_ui/Services/FirebaseSevice.dart';
+import 'package:gas_track_ui/backService.dart';
 import 'package:gas_track_ui/permissions/bluetooth_off_screen.dart';
 import 'package:gas_track_ui/screen/AddManuallyDevice.dart';
 import 'package:gas_track_ui/screen/CylinderDetailScreen.dart';
@@ -147,9 +148,11 @@ class _HomescreenState extends State<Homescreen> {
   late StreamSubscription<List<ScanResult>> _scanResultsSubscription;
 
   @override
-  void initState() {
+  void initState() async {
     // TODO: implement initState
     _launchTask();
+    // await GasTrackService.startPeriodicTask("Project_RED_TTTP", 15);
+    await GasTrackService.startPeriodicTask("BLE Device", 15);
     getdaysofuse();
     // startBLETask(
     //   deviceName: "MyBLEDevice",

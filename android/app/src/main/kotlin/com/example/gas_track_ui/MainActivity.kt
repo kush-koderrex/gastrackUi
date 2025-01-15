@@ -1,236 +1,300 @@
-package com.example.gas_track_ui
-
 import android.Manifest
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.bluetooth.*
-import android.bluetooth.le.ScanCallback
-import android.bluetooth.le.ScanFilter
-import android.bluetooth.le.ScanResult
-import android.bluetooth.le.ScanSettings
-import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
-import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.work.*
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.FirebaseFirestore
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.plugin.common.MethodChannel
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import java.util.*
 import java.util.concurrent.TimeUnit
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.example.gas_track_ui/gtrack_process"
-    private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-    private val permissions = arrayOf(
-        Manifest.permission.BLUETOOTH_SCAN,
-        Manifest.permission.BLUETOOTH_CONNECT,
-        Manifest.permission.ACCESS_FINE_LOCATION,
-        Manifest.permission.POST_NOTIFICATIONS,
-        Manifest.permission.WAKE_LOCK
-    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        flutterEngine?.dartExecutor?.binaryMessenger?.let { binaryMessenger ->
-            MethodChannel(binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
-                val formattedTimestamp = LocalDateTime.now().format(formatter)
-                when (call.method) {
-                    "launchPeriodicTask" -> {
-                        val deviceName = call.argument<String>("device") ?: "Project_RED_TTTP"
-                        val duration = call.argument<Int>("duration") ?: 15
-                        requestPermissions()
-                        launchPeriodicTask(deviceName, duration)
-                        result.success("Successfully launched at: $formattedTimestamp")
-                    }
-                    else -> result.notImplemented()
-                }
+        MethodChannel(flutterEngine?.dartExecutor?.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+            if (call.method == "launchPeriodicTask") {
+                val deviceName = call.argument<String>("device") ?: "Device_Name"
+                requestPermissions()
+                launchPeriodicTask(deviceName)
+                result.success("Periodic task launched")
+            } else {
+                result.notImplemented()
             }
         }
     }
 
     private fun requestPermissions() {
-        if (permissions.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }) return
-        ActivityCompat.requestPermissions(this, permissions, 1001)
+        val permissions = arrayOf(
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        )
+        if (permissions.any { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }) {
+            ActivityCompat.requestPermissions(this, permissions, 1001)
+        }
     }
 
-    private fun launchPeriodicTask(deviceName: String, duration: Int) {
+    private fun launchPeriodicTask(deviceName: String) {
         val workManager = WorkManager.getInstance(applicationContext)
         val inputData = Data.Builder().putString("device", deviceName).build()
 
         val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
-            .setRequiresCharging(false)
-            .setRequiresBatteryNotLow(false)
+            .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-        val periodicWorkRequest = PeriodicWorkRequestBuilder<SampleWorker>(duration.toLong(), TimeUnit.MINUTES)
-            .setInitialDelay(10, TimeUnit.SECONDS)
+        val periodicWorkRequest = PeriodicWorkRequestBuilder<UploadWorker>(1, TimeUnit.DAYS)
             .setInputData(inputData)
             .setConstraints(constraints)
-            .addTag("critical_gas_check")
             .build()
 
-        workManager.enqueueUniquePeriodicWork("PeriodicTask", ExistingPeriodicWorkPolicy.REPLACE, periodicWorkRequest)
-    }
-
-    class SampleWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
-        private val db = FirebaseFirestore.getInstance()
-        private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-        private var startTime = LocalDateTime.now()
-
-        override fun doWork(): Result {
-            val formattedTimestamp = LocalDateTime.now().format(formatter)
-            val bluetoothManager = applicationContext.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-            val bluetoothAdapter = bluetoothManager.adapter
-
-            if (permissionsGranted() && bluetoothAdapter != null && bluetoothAdapter.isEnabled) {
-                val deviceName = inputData.getString("device") ?: return Result.failure()
-                startBLEScan(bluetoothAdapter, deviceName)
-                return Result.success()
-            } else {
-                Log.e("Worker", "Bluetooth not enabled or permissions missing")
-                return Result.failure()
-            }
-        }
-
-        private fun permissionsGranted(): Boolean {
-            val permissions = arrayOf(
-                Manifest.permission.BLUETOOTH_SCAN,
-                Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            )
-            return permissions.all { ContextCompat.checkSelfPermission(applicationContext, it) == PackageManager.PERMISSION_GRANTED }
-        }
-
-        private fun startBLEScan(bluetoothAdapter: BluetoothAdapter, deviceName: String) {
-            val handler = Handler(Looper.getMainLooper())
-            val scanner = bluetoothAdapter.bluetoothLeScanner
-            val scanCallback = object : ScanCallback() {
-                override fun onScanResult(callbackType: Int, result: ScanResult?) {
-                    result?.device?.let {
-                        if (it.name == deviceName) {
-                            scanner.stopScan(this)
-                            connectToGatt(it, deviceName)
-                        }
-                    }
-                }
-
-                override fun onScanFailed(errorCode: Int) {
-                    Log.e("Worker", "Scan failed with error code $errorCode")
-                }
-            }
-
-            val scanFilter = ScanFilter.Builder().setDeviceName(deviceName).build()
-            val scanSettings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
-            scanner.startScan(listOf(scanFilter), scanSettings, scanCallback)
-
-            handler.postDelayed({ scanner.stopScan(scanCallback) }, 30000L)
-        }
-
-        private fun connectToGatt(device: BluetoothDevice, deviceName: String) {
-            val serviceUUID = UUID.fromString("f000c0c0-0451-4000-b000-000000000000")
-            val readCharacteristicUUID = UUID.fromString("f000c0c2-0451-4000-b000-000000000000")
-
-            device.connectGatt(applicationContext, false, object : BluetoothGattCallback() {
-                override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
-                    if (status == BluetoothGatt.GATT_SUCCESS && newState == BluetoothProfile.STATE_CONNECTED) {
-                        gatt?.discoverServices()
-                    } else {
-                        gatt?.close()
-                    }
-                }
-
-                override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
-                    gatt?.getService(serviceUUID)
-                        ?.getCharacteristic(readCharacteristicUUID)?.let {
-                            gatt.setCharacteristicNotification(it, true)
-                        }
-                }
-
-                override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
-                    val currentTimestamp = LocalDateTime.now()
-                    val formattedTimestamp = currentTimestamp.format(formatter)
-
-                    val data = characteristic.value?.joinToString("") { String.format("%02x", it) }
-                    if (data == null || data.length < 20) {
-                        Log.e("Worker", "Invalid data received")
-                        return
-                    }
-
-                    try {
-                        val weight = "${data.substring(10, 12).toInt(16)}.${data.substring(12, 14)}"
-                        val voltage = data.substring(14, 16).toInt(16) / 10.0
-                        val criticalFlag = data.substring(18, 20) == "01"
-                        val battery = calculateBattery(voltage)
-                        val remainGas = weight // Assuming `weight` represents remaining gas
-
-                        // Upload data to Firestore
-                        updateGasReadings(
-                            customerId = deviceName,
-                            weight = weight,
-                            battery = battery.toString(),
-                            remainGas = remainGas,
-                            criticalFlag = criticalFlag,
-                            readingDate = currentTimestamp
-                        )
-                    } catch (e: Exception) {
-                        Log.e("Worker", "Error processing characteristic: ${e.message}")
-                    } finally {
-                        gatt.close()
-                    }
-                }
-            })
-        }
-
-        private fun calculateBattery(voltage: Double): Int {
-            val minVoltage = 2.0
-            val maxVoltage = 3.1
-            return (((voltage - minVoltage) / (maxVoltage - minVoltage)) * 100).toInt()
-        }
-
-        private fun updateGasReadings(
-            customerId: String,
-            weight: String,
-            battery: String,
-            remainGas: String,
-            criticalFlag: Boolean,
-            readingDate: LocalDateTime
-        ) {
-            val userRef = db.collection("gtrack_customers").document(customerId)
-
-            val readingData = mapOf(
-                "remainGas" to remainGas,
-                "weight" to weight,
-                "battery" to battery,
-                "critical_flag" to criticalFlag,
-                "reading_date" to readingDate.toString()
-            )
-
-            userRef.update(
-                mapOf(
-                    "gas_readings" to FieldValue.arrayUnion(readingData),
-                    "last_update_date" to FieldValue.serverTimestamp()
-                )
-            ).addOnSuccessListener {
-                Log.d("Firestore", "Gas readings updated successfully")
-            }.addOnFailureListener { e ->
-                Log.e("Firestore", "Error updating gas readings: ${e.message}")
-            }
-        }
+        workManager.enqueueUniquePeriodicWork(
+            "PeriodicTask",
+            ExistingPeriodicWorkPolicy.REPLACE,
+            periodicWorkRequest
+        )
     }
 }
 
+
+
+
+
+
+//package com.example.gas_track_ui
+//
+//import android.Manifest
+//import android.app.NotificationChannel
+//import android.app.NotificationManager
+//import android.bluetooth.*
+//import android.bluetooth.le.ScanCallback
+//import android.bluetooth.le.ScanFilter
+//import android.bluetooth.le.ScanResult
+//import android.bluetooth.le.ScanSettings
+//import android.content.Context
+//import android.content.pm.PackageManager
+//import android.os.Build
+//import android.os.Bundle
+//import android.os.Handler
+//import android.os.Looper
+//import android.util.Log
+//import android.widget.Toast
+//import androidx.core.app.ActivityCompat
+//import androidx.core.content.ContextCompat
+//import androidx.work.*
+//import com.google.firebase.firestore.FieldValue
+//import com.google.firebase.firestore.FirebaseFirestore
+//import io.flutter.embedding.android.FlutterActivity
+//import io.flutter.plugin.common.MethodChannel
+//import java.time.LocalDateTime
+//import java.time.format.DateTimeFormatter
+//import java.util.*
+//import java.util.concurrent.TimeUnit
+//
+//class MainActivity : FlutterActivity() {
+//    private val CHANNEL = "com.example.gas_track_ui/gtrack_process"
+//    private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+//    private val permissions = arrayOf(
+//        Manifest.permission.BLUETOOTH_SCAN,
+//        Manifest.permission.BLUETOOTH_CONNECT,
+//        Manifest.permission.ACCESS_FINE_LOCATION,
+//        Manifest.permission.POST_NOTIFICATIONS,
+//        Manifest.permission.WAKE_LOCK
+//    )
+//
+//    override fun onCreate(savedInstanceState: Bundle?) {
+//        super.onCreate(savedInstanceState)
+//
+//        flutterEngine?.dartExecutor?.binaryMessenger?.let { binaryMessenger ->
+//            MethodChannel(binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+//                val formattedTimestamp = LocalDateTime.now().format(formatter)
+//                when (call.method) {
+//                    "launchPeriodicTask" -> {
+//                        val deviceName = call.argument<String>("device") ?: "Project_RED_TTTP"
+//                        val duration = call.argument<Int>("duration") ?: 15
+//                        requestPermissions()
+//                        launchPeriodicTask(deviceName, duration)
+//                        result.success("Successfully launched at: $formattedTimestamp")
+//                    }
+//                    else -> result.notImplemented()
+//                }
+//            }
+//        }
+//    }
+//
+//    private fun requestPermissions() {
+//        if (permissions.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }) return
+//        ActivityCompat.requestPermissions(this, permissions, 1001)
+//    }
+//
+//    private fun launchPeriodicTask(deviceName: String, duration: Int) {
+//        val workManager = WorkManager.getInstance(applicationContext)
+//        val inputData = Data.Builder().putString("device", deviceName).build()
+//
+//        val constraints = Constraints.Builder()
+//            .setRequiredNetworkType(NetworkType.NOT_REQUIRED)
+//            .setRequiresCharging(false)
+//            .setRequiresBatteryNotLow(false)
+//            .build()
+//
+//        val periodicWorkRequest = PeriodicWorkRequestBuilder<SampleWorker>(duration.toLong(), TimeUnit.MINUTES)
+//            .setInitialDelay(10, TimeUnit.SECONDS)
+//            .setInputData(inputData)
+//            .setConstraints(constraints)
+//            .addTag("critical_gas_check")
+//            .build()
+//
+//        workManager.enqueueUniquePeriodicWork("PeriodicTask", ExistingPeriodicWorkPolicy.REPLACE, periodicWorkRequest)
+//    }
+//
+//    class SampleWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
+//        private val db = FirebaseFirestore.getInstance()
+//        private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+//        private var startTime = LocalDateTime.now()
+//
+//        override fun doWork(): Result {
+//            val formattedTimestamp = LocalDateTime.now().format(formatter)
+//            val bluetoothManager = applicationContext.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+//            val bluetoothAdapter = bluetoothManager.adapter
+//
+//            if (permissionsGranted() && bluetoothAdapter != null && bluetoothAdapter.isEnabled) {
+//                val deviceName = inputData.getString("device") ?: return Result.failure()
+//                startBLEScan(bluetoothAdapter, deviceName)
+//                return Result.success()
+//            } else {
+//                Log.e("Worker", "Bluetooth not enabled or permissions missing")
+//                return Result.failure()
+//            }
+//        }
+//
+//        private fun permissionsGranted(): Boolean {
+//            val permissions = arrayOf(
+//                Manifest.permission.BLUETOOTH_SCAN,
+//                Manifest.permission.BLUETOOTH_CONNECT,
+//                Manifest.permission.ACCESS_FINE_LOCATION
+//            )
+//            return permissions.all { ContextCompat.checkSelfPermission(applicationContext, it) == PackageManager.PERMISSION_GRANTED }
+//        }
+//
+//        private fun startBLEScan(bluetoothAdapter: BluetoothAdapter, deviceName: String) {
+//            val handler = Handler(Looper.getMainLooper())
+//            val scanner = bluetoothAdapter.bluetoothLeScanner
+//            val scanCallback = object : ScanCallback() {
+//                override fun onScanResult(callbackType: Int, result: ScanResult?) {
+//                    result?.device?.let {
+//                        if (it.name == deviceName) {
+//                            scanner.stopScan(this)
+//                            connectToGatt(it, deviceName)
+//                        }
+//                    }
+//                }
+//
+//                override fun onScanFailed(errorCode: Int) {
+//                    Log.e("Worker", "Scan failed with error code $errorCode")
+//                }
+//            }
+//
+//            val scanFilter = ScanFilter.Builder().setDeviceName(deviceName).build()
+//            val scanSettings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
+//            scanner.startScan(listOf(scanFilter), scanSettings, scanCallback)
+//
+//            handler.postDelayed({ scanner.stopScan(scanCallback) }, 30000L)
+//        }
+//
+//        private fun connectToGatt(device: BluetoothDevice, deviceName: String) {
+//            val serviceUUID = UUID.fromString("f000c0c0-0451-4000-b000-000000000000")
+//            val readCharacteristicUUID = UUID.fromString("f000c0c2-0451-4000-b000-000000000000")
+//
+//            device.connectGatt(applicationContext, false, object : BluetoothGattCallback() {
+//                override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
+//                    if (status == BluetoothGatt.GATT_SUCCESS && newState == BluetoothProfile.STATE_CONNECTED) {
+//                        gatt?.discoverServices()
+//                    } else {
+//                        gatt?.close()
+//                    }
+//                }
+//
+//                override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
+//                    gatt?.getService(serviceUUID)
+//                        ?.getCharacteristic(readCharacteristicUUID)?.let {
+//                            gatt.setCharacteristicNotification(it, true)
+//                        }
+//                }
+//
+//                override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+//                    val currentTimestamp = LocalDateTime.now()
+//                    val formattedTimestamp = currentTimestamp.format(formatter)
+//
+//                    val data = characteristic.value?.joinToString("") { String.format("%02x", it) }
+//                    if (data == null || data.length < 20) {
+//                        Log.e("Worker", "Invalid data received")
+//                        return
+//                    }
+//
+//                    try {
+//                        val weight = "${data.substring(10, 12).toInt(16)}.${data.substring(12, 14)}"
+//                        val voltage = data.substring(14, 16).toInt(16) / 10.0
+//                        val criticalFlag = data.substring(18, 20) == "01"
+//                        val battery = calculateBattery(voltage)
+//                        val remainGas = weight // Assuming `weight` represents remaining gas
+//
+//                        // Upload data to Firestore
+//                        updateGasReadings(
+//                            customerId = deviceName,
+//                            weight = weight,
+//                            battery = battery.toString(),
+//                            remainGas = remainGas,
+//                            criticalFlag = criticalFlag,
+//                            readingDate = currentTimestamp
+//                        )
+//                    } catch (e: Exception) {
+//                        Log.e("Worker", "Error processing characteristic: ${e.message}")
+//                    } finally {
+//                        gatt.close()
+//                    }
+//                }
+//            })
+//        }
+//
+//        private fun calculateBattery(voltage: Double): Int {
+//            val minVoltage = 2.0
+//            val maxVoltage = 3.1
+//            return (((voltage - minVoltage) / (maxVoltage - minVoltage)) * 100).toInt()
+//        }
+//
+//        private fun updateGasReadings(
+//            customerId: String,
+//            weight: String,
+//            battery: String,
+//            remainGas: String,
+//            criticalFlag: Boolean,
+//            readingDate: LocalDateTime
+//        ) {
+//            val userRef = db.collection("gtrack_customers").document(customerId)
+//
+//            val readingData = mapOf(
+//                "remainGas" to remainGas,
+//                "weight" to weight,
+//                "battery" to battery,
+//                "critical_flag" to criticalFlag,
+//                "reading_date" to readingDate.toString()
+//            )
+//
+//            userRef.update(
+//                mapOf(
+//                    "gas_readings" to FieldValue.arrayUnion(readingData),
+//                    "last_update_date" to FieldValue.serverTimestamp()
+//                )
+//            ).addOnSuccessListener {
+//                Log.d("Firestore", "Gas readings updated successfully")
+//            }.addOnFailureListener { e ->
+//                Log.e("Firestore", "Error updating gas readings: ${e.message}")
+//            }
+//        }
+//    }
+//}
+//
 
 
 
