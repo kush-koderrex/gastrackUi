@@ -84,8 +84,7 @@ class _DeviceaddedScreenState extends State<DeviceaddedScreen> {
       Utils.battery = _deviceResponse!.battery;
       Utils.weight =
           "${_deviceResponse!.beforeDecimal}.${_deviceResponse!.afterDecimal}";
-      Utils.remainGas = Utils.calculateGasPercentage(double.parse(Utils.weight))
-          .toStringAsFixed(0);
+      Utils.remainGas = Utils.calculateGasPercentage(double.parse(Utils.weight)).toStringAsFixed(0);
       print(
           "Data updated: battery=${Utils.battery}, weight=${Utils.weight}, gas=${Utils.remainGas}");
 

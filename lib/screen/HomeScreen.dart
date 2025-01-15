@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gas_track_ui/BackGroundService.dart';
 import 'package:gas_track_ui/LocalStorage.dart';
 import 'package:gas_track_ui/Services/FirebaseSevice.dart';
 import 'package:gas_track_ui/backService.dart';
+import 'package:gas_track_ui/main.dart';
 import 'package:gas_track_ui/permissions/bluetooth_off_screen.dart';
 import 'package:gas_track_ui/screen/AddManuallyDevice.dart';
 import 'package:gas_track_ui/screen/CylinderDetailScreen.dart';
@@ -64,11 +66,8 @@ class Homescreen extends StatefulWidget {
 }
 
 class _HomescreenState extends State<Homescreen> {
-
-
-
-
-  static const platform = MethodChannel('com.example.gas_track_ui/gtrack_process');
+  static const platform =
+      MethodChannel('com.example.gas_track_ui/gtrack_process');
   String _statusMessage = '';
   String _logContent = '';
   // String name = widget.deviceInfo;
@@ -81,8 +80,9 @@ class _HomescreenState extends State<Homescreen> {
     await requestPermissions();
     try {
       final value = "BLE Device";
-      final duration= int.parse(_controller2.text);
-      result = await platform.invokeMethod('launchPeriodicTask', {'device': value,'duration':duration});
+      final duration = int.parse(_controller2.text);
+      result = await platform.invokeMethod(
+          'launchPeriodicTask', {'device': value, 'duration': duration});
     } on PlatformException catch (e) {
       result = "Failed to launch task: '${e.message}'.";
     }
@@ -92,7 +92,21 @@ class _HomescreenState extends State<Homescreen> {
     });
   }
 
+  Future<void> _launchTaskUpload() async {
+    print("Background Service");
+    String result;
+    await requestPermissions();
+    try {
+      result = await platform.invokeMethod('viewLogs');
 
+    } on PlatformException catch (e) {
+      result = "Failed to launch task: '${e.message}'.";
+    }
+
+    // setState(() {
+    //   _statusMessage = result;
+    // });
+  }
 
   // test
 
@@ -148,11 +162,11 @@ class _HomescreenState extends State<Homescreen> {
   late StreamSubscription<List<ScanResult>> _scanResultsSubscription;
 
   @override
-  void initState() async {
+  void initState() {
     // TODO: implement initState
     _launchTask();
     // await GasTrackService.startPeriodicTask("Project_RED_TTTP", 15);
-    await GasTrackService.startPeriodicTask("BLE Device", 15);
+    GasTrackService.startPeriodicTask("BLE Device", 15);
     getdaysofuse();
     // startBLETask(
     //   deviceName: "MyBLEDevice",
@@ -278,7 +292,8 @@ class _HomescreenState extends State<Homescreen> {
           // print(_deviceResponse?.battery.toString());
           setState(() {
             Utils.battery = "${_deviceResponse?.battery.toString()}";
-            Utils.weight = "${_deviceResponse?.beforeDecimal}.${_deviceResponse?.afterDecimal}";
+            Utils.weight =
+                "${_deviceResponse?.beforeDecimal}.${_deviceResponse?.afterDecimal}";
             Utils.remainGas =
                 Utils.calculateGasPercentage(double.parse(Utils.weight))
                     .toStringAsFixed(0);
@@ -287,12 +302,19 @@ class _HomescreenState extends State<Homescreen> {
 
           print("battery:-${_deviceResponse?.battery.toString()}");
           print("RemainGas:-${Utils.remainGas}");
-          print("weight:-${_deviceResponse?.beforeDecimal}.${_deviceResponse?.afterDecimal}");
+          print(
+              "weight:-${_deviceResponse?.beforeDecimal}.${_deviceResponse?.afterDecimal}");
           print("criticalFlag:-${_deviceResponse?.critical}}");
           var userData = await UserPreferences().getUserData();
+          if (_deviceResponse?.critical != null &&
+              _deviceResponse?.critical == true) {
+            await _showCriticalNotification();
+          }
 
           await FirestoreService().updateGasReadings(
-            customerId: Utils.cusUuid == null ? userData["email"]! : Utils.cusUuid, // Use appropriate customer_id
+            customerId: Utils.cusUuid == null
+                ? userData["email"]!
+                : Utils.cusUuid, // Use appropriate customer_id
             remainGas: Utils.remainGas,
             weight: Utils.weight,
             battery: Utils.battery,
@@ -300,8 +322,6 @@ class _HomescreenState extends State<Homescreen> {
             criticalFlag: Utils.critical_flag,
             readingDate: DateTime.now(),
           );
-
-
           Fluttertoast.showToast(
             msg: 'Data Update successfully!',
             toastLength: Toast.LENGTH_SHORT,
@@ -324,7 +344,27 @@ class _HomescreenState extends State<Homescreen> {
   Future<void> _refreshData() async {
     GetData();
     getdaysofuse();
+  }
 
+  Future<void> _showCriticalNotification() async {
+    const AndroidNotificationDetails androidNotificationDetails =
+        AndroidNotificationDetails(
+      'critical_channel', // Channel ID
+      'Critical Notifications', // Channel Name
+      channelDescription: 'Notifications for critical events.',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+
+    const NotificationDetails notificationDetails =
+        NotificationDetails(android: androidNotificationDetails);
+
+    await flutterLocalNotificationsPlugin.show(
+      0, // Notification ID
+      'Critical Alert', // Notification Title
+      'A critical event has been detected!', // Notification Body
+      notificationDetails,
+    );
   }
 
   // Future<void> getdaysofuse() async {
@@ -369,8 +409,6 @@ class _HomescreenState extends State<Homescreen> {
 
     developer.log(readings.toString());
   }
-
-
 
   DeviceResponse? parseDeviceResponse(String response) {
     // Ensure the response is in uppercase
@@ -457,8 +495,8 @@ class _HomescreenState extends State<Homescreen> {
               children: [
                 (isConnected == true)
                     ? Row(
-                      children: [
-                        Container(
+                        children: [
+                          Container(
                             width: 6,
                             height: 6,
                             decoration: BoxDecoration(
@@ -466,32 +504,36 @@ class _HomescreenState extends State<Homescreen> {
                               shape: BoxShape.circle,
                             ),
                           ),
-                        SizedBox(width: 10,),
-                        Text(
-                          "Connected",
-                          style: AppStyles.customTextStyle(
-                              fontSize: 13.0, fontWeight: FontWeight.w400),
-                        ),
-                      ],
-                    )
+                          SizedBox(
+                            width: 10,
+                          ),
+                          Text(
+                            "Connected",
+                            style: AppStyles.customTextStyle(
+                                fontSize: 13.0, fontWeight: FontWeight.w400),
+                          ),
+                        ],
+                      )
                     : Row(
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          SizedBox(
+                            width: 10,
+                          ),
+                          Text(
+                            "DisConnected",
+                            style: AppStyles.customTextStyle(
+                                fontSize: 13.0, fontWeight: FontWeight.w400),
+                          ),
+                        ],
                       ),
-                    ),
-                    SizedBox(width: 10,),
-                    Text(
-                      "DisConnected",
-                      style: AppStyles.customTextStyle(
-                          fontSize: 13.0, fontWeight: FontWeight.w400),
-                    ),
-                  ],
-                ),
                 // Container(
                 //   width: 6,
                 //   height: 6,
@@ -503,7 +545,6 @@ class _HomescreenState extends State<Homescreen> {
                 SizedBox(
                   width: 10,
                 ),
-
               ],
             ),
           ],
@@ -773,8 +814,9 @@ class _HomescreenState extends State<Homescreen> {
                                                     child: Column(
                                                       children: [
                                                         InkWell(
-                                                          onTap: (){
-                                                            getdaysofuse();
+                                                          onTap: () {
+                                                            // getdaysofuse();
+                                                            _launchTaskUpload();
                                                           },
                                                           child: Card(
                                                             // elevation: 5,
@@ -785,8 +827,8 @@ class _HomescreenState extends State<Homescreen> {
                                                                       12), // Padding inside the container
                                                               decoration:
                                                                   BoxDecoration(
-                                                                color:
-                                                                    Colors.white,
+                                                                color: Colors
+                                                                    .white,
                                                                 borderRadius:
                                                                     BorderRadius
                                                                         .circular(
@@ -803,12 +845,12 @@ class _HomescreenState extends State<Homescreen> {
                                                                     backgroundColor:
                                                                         Color(
                                                                             0xF2913189),
-                                                                    child:
-                                                                        SvgPicture
-                                                                            .asset(
+                                                                    child: SvgPicture
+                                                                        .asset(
                                                                       'assets/images/svg/calendar.svg', // Path to your SVG asset
                                                                       width: 20,
-                                                                      height: 20,
+                                                                      height:
+                                                                          20,
                                                                       color: Colors
                                                                           .white,
                                                                     ), // Icon inside avatar
@@ -823,8 +865,7 @@ class _HomescreenState extends State<Homescreen> {
                                                                         fontSize:
                                                                             15.0,
                                                                         fontWeight:
-                                                                            FontWeight
-                                                                                .w500),
+                                                                            FontWeight.w500),
                                                                   ),
                                                                 ],
                                                               ),
@@ -975,16 +1016,16 @@ class _HomescreenState extends State<Homescreen> {
                                                                   ),
                                                                 )
                                                               : Container(
-                                                            width: 8,
-                                                            height: 8,
-                                                            decoration:
-                                                            const BoxDecoration(
-                                                              color: Colors
-                                                                  .red,
-                                                              shape: BoxShape
-                                                                  .circle,
-                                                            ),
-                                                          ),
+                                                                  width: 8,
+                                                                  height: 8,
+                                                                  decoration:
+                                                                      const BoxDecoration(
+                                                                    color: Colors
+                                                                        .red,
+                                                                    shape: BoxShape
+                                                                        .circle,
+                                                                  ),
+                                                                ),
                                                         ],
                                                       ),
                                                     ),

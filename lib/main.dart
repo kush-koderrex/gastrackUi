@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:gas_track_ui/permissions/bluetooth_off_screen.dart';
 import 'package:gas_track_ui/screen/AddManuallyDevice.dart';
 import 'package:gas_track_ui/screen/AddYouDevice.dart';
@@ -22,6 +23,9 @@ import 'package:permission_handler/permission_handler.dart';
 
 
 
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+FlutterLocalNotificationsPlugin();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // requestPermissions();
@@ -33,6 +37,23 @@ Future<void> main() async {
 
     runApp(const MyApp());
   });
+
+  // Initialization settings for Android
+  const AndroidInitializationSettings initializationSettingsAndroid =
+  AndroidInitializationSettings('@mipmap/ic_launcher');
+
+  // Initialization settings for iOS
+  // const IOSInitializationSettings initializationSettingsIOS =
+  // IOSInitializationSettings();
+
+  // Initialize the plugin
+  const InitializationSettings initializationSettings =
+  InitializationSettings(
+    android: initializationSettingsAndroid,
+    // iOS: initializationSettingsIOS,
+  );
+
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 }
 
 class MyApp extends StatefulWidget {
