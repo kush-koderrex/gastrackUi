@@ -1,12 +1,8 @@
 import 'dart:async';
-
 import 'package:easy_stepper/easy_stepper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gas_track_ui/screen/HomeScreen.dart';
-import 'package:gas_track_ui/screen/QrScannerScreen.dart';
-import 'package:gas_track_ui/utils/app_colors.dart';
 import 'package:gas_track_ui/utils/extra.dart';
 import 'package:gas_track_ui/utils/snackbar.dart';
 import 'package:gas_track_ui/utils/utils.dart';
@@ -43,12 +39,13 @@ class _DeviceaddedScreenState extends State<DeviceaddedScreen> {
       return null;
     }
 
+
+
     try {
       // Parsing the response
       String deviceId = response.substring(0, 6); // 3 bytes -> 6 hex digits
       String reqCode = response.substring(6, 8); // 1 byte -> 2 hex digits
       String dataLength = response.substring(8, 10); // 1 byte -> 2 hex digits
-
       String beforeDecimal = response.substring(10, 12);
       String afterDecimal = response.substring(12, 14);
       String battery = response.substring(14, 16);
@@ -74,83 +71,222 @@ class _DeviceaddedScreenState extends State<DeviceaddedScreen> {
   }
 
 
+
+  int calculateBatteryFromString(String numberString) {
+    if (numberString.length < 2) {
+      throw ArgumentError("Input string must have at least two characters.");
+    }
+
+    // Convert "21" to "2.1"
+    String formattedString = numberString.substring(0, numberString.length - 1) + "." + numberString.substring(numberString.length - 1);
+    double voltage = double.parse(formattedString);
+
+    // Battery calculation
+    double minVoltage = 2.0;
+    double maxVoltage = 3.1;
+    int battery = (((voltage - minVoltage) / (maxVoltage - minVoltage)) * 100).toInt();
+
+    return battery;
+  }
+
+
+
   void processReceivedData() {
     final hexString = _value
         .map((decimal) => decimal.toRadixString(16).padLeft(2, '0'))
         .join('');
     _deviceResponse = parseDeviceResponse(hexString);
 
+
+    // if (_deviceResponse != null) {
+    //   var batdata=calculateBatteryFromString(_deviceResponse!.battery);
+    //   // var calbat = calculateBattery(batdata);
+    //   print("calbat ${batdata}");
+    //   Utils.battery = batdata.toString();
+    //   Utils.weight =
+    //       "${_deviceResponse!.beforeDecimal}.${_deviceResponse!.afterDecimal}";
+    //   Utils.remainGas = Utils.calculateGasPercentage(double.parse(Utils.weight)).toStringAsFixed(0);
+    //   print(
+    //       "Data updated: battery=${Utils.battery}, weight=${Utils.weight}, gas=${Utils.remainGas}");
+    //
+    //   setState(() {
+    //     isLoading = false;
+    //     isGetData = true;
+    //   });
+    //
+    //   _lastValueSubscription.cancel();
+    //   Navigator.pushReplacement(
+    //       context, MaterialPageRoute(builder: (context) => Homescreen()));
+    // }
     if (_deviceResponse != null) {
-      Utils.battery = _deviceResponse!.battery;
-      Utils.weight =
+      // Parse battery value safely
+      int? batdata = calculateBatteryFromString(_deviceResponse!.battery);
+      if (batdata != null) {
+        print("Calculated Battery: ${batdata}");
+        Utils.battery = batdata.toString();
+      } else {
+        print("Error: Invalid battery data!");
+        Utils.battery = "N/A"; // Default value
+      }
+
+      // Construct weight safely
+      String rawWeight =
           "${_deviceResponse!.beforeDecimal}.${_deviceResponse!.afterDecimal}";
-      Utils.remainGas = Utils.calculateGasPercentage(double.parse(Utils.weight)).toStringAsFixed(0);
-      print(
-          "Data updated: battery=${Utils.battery}, weight=${Utils.weight}, gas=${Utils.remainGas}");
+
+      // Remove unwanted characters and parse safely
+      rawWeight = rawWeight.replaceAll(RegExp(r'[^0-9.]'), '');
+      double? parsedWeight = double.tryParse(rawWeight);
+
+      if (parsedWeight != null) {
+        Utils.weight = parsedWeight.toStringAsFixed(2); // Keep 2 decimal places
+        Utils.remainGas = Utils.calculateGasPercentage(parsedWeight).toStringAsFixed(0);
+      } else {
+        print("Error: Invalid weight data!");
+        Utils.weight = "0.0"; // Default value
+        Utils.remainGas = "0"; // Default value
+      }
+
+      print("✅ Data updated: battery=${Utils.battery}, weight=${Utils.weight}, gas=${Utils.remainGas}");
 
       setState(() {
         isLoading = false;
         isGetData = true;
       });
 
-      _lastValueSubscription.cancel();
-      Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (context) => Homescreen()));
+      // Cancel subscription safely
+      _lastValueSubscription?.cancel();
+
+      // Move navigation **outside** setState to prevent UI errors
+      Future.delayed(Duration(milliseconds: 500), () {
+        Navigator.pushReplacement(
+            context, MaterialPageRoute(builder: (context) => Homescreen()));
+      });
     }
+
   }
+
+  // Future<void> GetData() async {
+  //   if (isConnected) return;
+  //
+  //   // try {
+  //     print("Connecting to device...");
+  //     await Utils.device.connectAndUpdateStream().catchError((e) {
+  //       Snackbar.show(ABC.c, prettyException("Connect Error:", e),
+  //           success: false);
+  //     });
+  //
+  //     if (Utils.device.isConnected) {
+  //       print("Device connected");
+  //       isConnected = true;
+  //
+  //       _services = await Utils.device.discoverServices();
+  //
+  //       for (var service in _services) {
+  //         for (var characteristic in service.characteristics) {
+  //           final uuid = characteristic.uuid.toString();
+  //
+  //           if (uuid == Utils.writeCharacteristicUUID) {
+  //             Utils.Writecharacteristic = characteristic;
+  //           } else if (uuid == Utils.readCharacteristicUUID) {
+  //             Utils.Readcharacteristic = characteristic;
+  //             print("Read Characteristic Initialized: ${characteristic.uuid}");
+  //           }
+  //         }
+  //       }
+  //
+  //       if (Utils.Readcharacteristic.isNotifying == false) {
+  //         await Utils.subscribeToCharacteristic(Utils.Readcharacteristic);
+  //         isSubscribe = true;
+  //       }
+  //
+  //       if (isSubscribe) {
+  //         await Utils.onWritePressedgenreq(Utils.Writecharacteristic);
+  //         _lastValueSubscription =
+  //             Utils.Readcharacteristic.lastValueStream.listen((value) {
+  //           if (value.isNotEmpty) {
+  //             _value = value;
+  //             processReceivedData();
+  //           }
+  //         });
+  //       }
+  //     }
+  //   // } catch (e) {
+  //   //   print("GetData error: $e");
+  //   // }
+  // }
 
   Future<void> GetData() async {
     if (isConnected) return;
 
     try {
       print("Connecting to device...");
-      await Utils.device.connectAndUpdateStream().catchError((e) {
-        Snackbar.show(ABC.c, prettyException("Connect Error:", e),
-            success: false);
-      });
 
-      if (Utils.device.isConnected) {
-        print("Device connected");
-        isConnected = true;
+      // Attempt to connect if not already connected
+      if (!Utils.device.isConnected) {
+        await Utils.device.connectAndUpdateStream().catchError((e) {
+          Snackbar.show(ABC.c, prettyException("Connect Error:", e), success: false);
+        });
+      }
 
-        _services = await Utils.device.discoverServices();
-        for (var service in _services) {
-          for (var characteristic in service.characteristics) {
-            final uuid = characteristic.uuid.toString();
-            if (uuid == Utils.writeCharacteristicUUID) {
-              Utils.Writecharacteristic = characteristic;
-            } else if (uuid == Utils.readCharacteristicUUID) {
-              Utils.Readcharacteristic = characteristic;
-            }
-          }
-        }
+      // Proceed only if the device is connected
+      if (!Utils.device.isConnected) {
+        print("Device connection failed.");
+        return;
+      }
 
-        if (Utils.Readcharacteristic.isNotifying == false) {
-          await Utils.subscribeToCharacteristic(Utils.Readcharacteristic);
-          isSubscribe = true;
-        }
+      print("Device connected.");
+      isConnected = true;
 
-        if (isSubscribe) {
-          await Utils.onWritePressedgenreq(Utils.Writecharacteristic);
-          _lastValueSubscription =
-              Utils.Readcharacteristic.lastValueStream.listen((value) {
-            if (value.isNotEmpty) {
-              _value = value;
-              processReceivedData();
-            }
-          });
+      // Discover services and store characteristics
+      _services = await Utils.device.discoverServices();
+
+      // Map to store characteristics for quick lookup
+      Map<String, dynamic> characteristicsMap = {};
+
+      for (var service in _services) {
+        for (var characteristic in service.characteristics) {
+          characteristicsMap[characteristic.uuid.toString()] = characteristic;
         }
       }
+
+      // Assign Read & Write characteristics
+      if (characteristicsMap.containsKey(Utils.writeCharacteristicUUID)) {
+        Utils.Writecharacteristic = characteristicsMap[Utils.writeCharacteristicUUID];
+      }
+
+      if (characteristicsMap.containsKey(Utils.readCharacteristicUUID)) {
+        Utils.Readcharacteristic = characteristicsMap[Utils.readCharacteristicUUID];
+        print("Read Characteristic Initialized: ${Utils.Readcharacteristic.uuid}");
+      }
+
+      // Ensure Read characteristic is subscribed
+      if (!Utils.Readcharacteristic.isNotifying) {
+        await Utils.subscribeToCharacteristic(Utils.Readcharacteristic);
+        isSubscribe = true;
+      }
+
+      // If subscribed, start listening for data
+      if (isSubscribe) {
+        await Utils.onWritePressedgenreq(Utils.Writecharacteristic);
+
+        _lastValueSubscription = Utils.Readcharacteristic.lastValueStream.listen((value) {
+          if (value.isNotEmpty) {
+            _value = value;
+            processReceivedData();
+          }
+        });
+      }
+
     } catch (e) {
-      print("GetData error: $e");
+      print("GetDatascan error: $e");
     }
   }
 
-  @override
-  void dispose() {
-    _lastValueSubscription.cancel();
-    super.dispose();
-  }
+  // @override
+  // void dispose() {
+  //   _lastValueSubscription.cancel();
+  //   super.dispose();
+  // }
 
   @override
   Widget build(BuildContext context) {

@@ -1,9 +1,13 @@
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:gas_track_ui/LocalStorage.dart';
+import 'package:gas_track_ui/Utils/Utils.dart';
+import 'package:gas_track_ui/permissions/permissions.dart';
+import 'package:gas_track_ui/screen/HomeScreen.dart';
+import 'package:gas_track_ui/screen/Login_Screen.dart';
 import 'package:gas_track_ui/screen/onBoardScreen.dart';
 import 'package:gas_track_ui/utils/app_colors.dart';
-
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,18 +17,51 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+
+  check() async {
+    var value = await PermissionAccess().getPermission();
+    print("value");
+    print(value);
+    if (value != null) {
+      if (value == true) {
+        var userToken = await UserPreferences().getUserData();
+        print("User ID: ${userToken["userId"]}");
+        print("email ID: ${userToken["email"]}");
+        print(Utils.cusUuid + "{Utils.cusUuid}");
+        if (userToken["userId"] != null) {
+          Utils.cusUuid = userToken["email"]!;
+          print(Utils.cusUuid + " {Utils.cusUuid}");
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              // builder: (context) => const AddYouDeviceScreen(),
+              builder: (context) => const Homescreen(),
+            ),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const OnBoardScreen(),
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     // Timer(const Duration(seconds: 3), () => navigateUser(context));
     Timer(
-        const Duration(seconds: 3),
-        () =>   Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const OnBoardScreen()),
-                (Route<dynamic> route) => false
-        ),
-            // (Route<dynamic> route) => false)
+      const Duration(seconds: 3),
+      () => check()
+          // Navigator.pushAndRemoveUntil(
+          // context,
+          // MaterialPageRoute(builder: (context) => const OnBoardScreen()),
+          // (Route<dynamic> route) => false),
+      // (Route<dynamic> route) => false)
     );
   }
 
@@ -88,9 +125,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
           ),
         ),
-
       ),
     );
   }
-
 }

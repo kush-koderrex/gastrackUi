@@ -54,17 +54,20 @@ class _LoginScreenState extends State<LoginScreen> {
     _getLocation();
     super.initState();
   }
+
   Future<void> _getLocation() async {
     try {
       final locationService = LocationService();
       final position = await locationService.getCurrentLocation();
 
-      if (mounted) { // Ensure widget is still in the widget tree
+      if (mounted) {
+        // Ensure widget is still in the widget tree
         if (position != null) {
           setState(() {
             _currentPosition = position;
           });
-          print("Latitude: ${position.latitude}, Longitude: ${position.longitude}");
+          print(
+              "Latitude: ${position.latitude}, Longitude: ${position.longitude}");
         } else {
           print("Location permission denied or location unavailable.");
         }
@@ -73,20 +76,6 @@ class _LoginScreenState extends State<LoginScreen> {
       print("Error retrieving location: $e");
     }
   }
-
-
-  // Future<void> _getLocation() async {
-  //   final locationService = LocationService();
-  //   final position = await locationService.getCurrentLocation();
-  //   if (position != null) {
-  //     setState(() {
-  //       _currentPosition = position;
-  //     });
-  //     print("Latitude: ${position.latitude}, Longitude: ${position.longitude}");
-  //   } else {
-  //     print("Location permission denied or location unavailable.");
-  //   }
-  // }
 
   Future<Map<String, String>> getLocationDetails(
       double latitude, double longitude) async {
@@ -108,82 +97,6 @@ class _LoginScreenState extends State<LoginScreen> {
       return {'country': '', 'state': '', 'city': ''};
     }
   }
-
-  // Future<void> loginWithGoogle() async {
-  //   _getLocation();
-  //   final googleSignIn = GoogleSignIn();
-  //   Map<String, String> locationDetails = await getLocationDetails(
-  //       _currentPosition!.latitude, _currentPosition!.longitude);
-  //   String country = locationDetails['country'] ?? 'N/A';
-  //   String state = locationDetails['state'] ?? 'N/A';
-  //   String city = locationDetails['city'] ?? 'N/A';
-  //
-  //   print("Country: $country");
-  //   print("State: $state");
-  //   print("City: $city");
-  //
-  //   try {
-  //     await googleSignIn.signOut();
-  //     final googleSignInAccount = await googleSignIn.signIn();
-  //
-  //     if (googleSignInAccount != null) {
-  //       setState(() {
-  //         googleName = googleSignInAccount.displayName;
-  //         googleEmail = googleSignInAccount.email;
-  //         googlePhotoUrl = googleSignInAccount.photoUrl;
-  //         googleId = googleSignInAccount.id;
-  //       });
-  //
-  //       if (_currentPosition != null) {
-  //         await FirestoreService().addUser(
-  //           authType: "Google",
-  //           name: googleName!,
-  //           email: googleEmail!,
-  //           phone: "",
-  //           profileUrl: googlePhotoUrl!,
-  //           userId: googleId!,
-  //           latitude: _currentPosition!.latitude.toString(),
-  //           longitude: _currentPosition!.longitude.toString(),
-  //           city: '$city',
-  //           state: '$state',
-  //           country: "$country",
-  //         );
-  //         Utils.cusUuid =googleEmail!;
-  //       } else {
-  //         print("Current position is not available.");
-  //       }
-  //
-  //       await UserPreferences().saveUserData(
-  //         name: googleName!,
-  //         email: googleEmail!,
-  //         profileUrl: googlePhotoUrl!,
-  //         userId: googleId!,
-  //       );
-  //
-  //
-  //
-  //
-  //
-  //       Navigator.pushReplacement(
-  //         context,
-  //         MaterialPageRoute(
-  //           builder: (context) => const AddYouDeviceScreen(),
-  //         ),
-  //       );
-  //     }
-  //   } catch (e) {
-  //     Fluttertoast.showToast(
-  //       msg: "Google Login Error: ${e.toString()}",
-  //       toastLength: Toast.LENGTH_LONG,
-  //       gravity: ToastGravity.BOTTOM,
-  //       backgroundColor: Colors.black,
-  //       textColor: Colors.white,
-  //       fontSize: 16.0,
-  //     );
-  //     debugPrint("Google Login Error: ${e.toString()}");
-  //   }
-  // }
-
 
   Future<void> loginWithGoogle() async {
     await _getLocation(); // Ensure location is fetched before using it
@@ -221,8 +134,6 @@ class _LoginScreenState extends State<LoginScreen> {
           googlePhotoUrl = googleSignInAccount.photoUrl ?? "";
           googleId = googleSignInAccount.id;
         });
-
-
 
         await FirestoreService().addUser(
           authType: "Google",
@@ -271,7 +182,6 @@ class _LoginScreenState extends State<LoginScreen> {
       debugPrint("Google Login Error: ${e.toString()}");
     }
   }
-
 
   Future<void> loginWithFacebook() async {
     try {
@@ -542,7 +452,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         fillColor: Colors
                                             .grey.shade200, // Grey inside color
                                         hintText: 'Enter Mobile Number',
-                                        hintStyle: TextStyle(
+                                        hintStyle: const TextStyle(
                                             color: Colors.grey,
                                             fontSize: 12,
                                             fontFamily: 'Cerapro',
@@ -643,7 +553,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         elevation: 5, // Elevation (shadow)
                                       ),
                                       child: isLoading
-                                          ? CircularProgressIndicator(
+                                          ? const CircularProgressIndicator(
                                               color: Colors.white,
                                             )
                                           : const Text(
@@ -704,79 +614,115 @@ class _LoginScreenState extends State<LoginScreen> {
                                               ],
                                             ),
                                             const SizedBox(height: 20),
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                InkWell(
-                                                    child: Container(
-                                                      width: height * 0.060,
-                                                      height: height * 0.060,
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.grey[100],
-                                                        shape: BoxShape.circle,
-                                                      ),
-                                                      child: const Padding(
-                                                        padding:
-                                                            EdgeInsets.all(8.0),
-                                                        child: CircleAvatar(
-                                                          radius: 72.0,
-                                                          backgroundColor:
-                                                              Colors
-                                                                  .transparent,
-                                                          backgroundImage:
-                                                              AssetImage(
-                                                                  'assets/images/LoginScreen/Facebook.png'),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    onTap: loginWithFacebook
-
-                                                    // () {
-                                                    // onPressed: ,
-                                                    // Navigator.push(
-                                                    //     context,
-                                                    //     MaterialPageRoute(
-                                                    //         builder: (context) =>
-                                                    //             const WelcomeScreen()));
-                                                    // }
-                                                    ),
-                                                const SizedBox(
-                                                  width: 25,
+                                            ElevatedButton(
+                                              onPressed: loginWithGoogle,
+                                              style: ElevatedButton.styleFrom(
+                                                // elevation: 2, // Higher value = more shadow
+                                                shadowColor: Colors.grey, // Shadow color
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(
+                                                      12), // Curved edges
                                                 ),
-                                                InkWell(
-                                                    child: Container(
-                                                      width: height * 0.060,
-                                                      height: height * 0.060,
-                                                      decoration: BoxDecoration(
-                                                        shape: BoxShape.circle,
-                                                        color: Colors.grey[100],
-                                                      ),
-                                                      child: const Padding(
-                                                        padding:
-                                                            EdgeInsets.all(8.0),
-                                                        child: CircleAvatar(
-                                                          radius: 72.0,
-                                                          backgroundColor:
-                                                              Colors
-                                                                  .transparent,
-                                                          backgroundImage:
-                                                              AssetImage(
-                                                                  'assets/images/LoginScreen/Google.png'),
-                                                        ),
-                                                      ),
+                                                minimumSize: Size(326, 60),
+                                                padding: const EdgeInsets.symmetric(
+                                                    horizontal: 20,
+                                                    vertical: 10),
+                                                backgroundColor: Colors.white,
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Image.asset(
+                                                      'assets/images/LoginScreen/Google.png',
+                                                      height:
+                                                          24), // Use local image
+                                                  const SizedBox(width: 10),
+                                                  const Text(
+                                                    'Login With Google',
+                                                    style: TextStyle(
+                                                      color: Colors.black,
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.w400,
+                                                      fontFamily: 'Cerapro',
                                                     ),
-                                                    onTap: loginWithGoogle
-                                                    //     () {
-                                                    //   Navigator.push(
-                                                    //       context,
-                                                    //       MaterialPageRoute(
-                                                    //           builder: (context) =>
-                                                    //                Otpscreen(verificationId: "",)));
-                                                    // }
-                                                    ),
-                                              ],
+                                                  ),
+                                                ],
+                                              ),
                                             ),
+                                            // Row(
+                                            //   mainAxisAlignment:
+                                            //       MainAxisAlignment.center,
+                                            //   children: [
+                                            //     InkWell(
+                                            //         child: Container(
+                                            //           width: height * 0.060,
+                                            //           height: height * 0.060,
+                                            //           decoration: BoxDecoration(
+                                            //             color: Colors.grey[100],
+                                            //             shape: BoxShape.circle,
+                                            //           ),
+                                            //           child: const Padding(
+                                            //             padding:
+                                            //                 EdgeInsets.all(8.0),
+                                            //             child: CircleAvatar(
+                                            //               radius: 72.0,
+                                            //               backgroundColor:
+                                            //                   Colors
+                                            //                       .transparent,
+                                            //               backgroundImage:
+                                            //                   AssetImage(
+                                            //                       'assets/images/LoginScreen/Facebook.png'),
+                                            //             ),
+                                            //           ),
+                                            //         ),
+                                            //         onTap: loginWithFacebook
+                                            //
+                                            //         // () {
+                                            //         // onPressed: ,
+                                            //         // Navigator.push(
+                                            //         //     context,
+                                            //         //     MaterialPageRoute(
+                                            //         //         builder: (context) =>
+                                            //         //             const WelcomeScreen()));
+                                            //         // }
+                                            //         ),
+                                            //     const SizedBox(
+                                            //       width: 25,
+                                            //     ),
+                                            //     InkWell(
+                                            //         child: Container(
+                                            //           width: height * 0.060,
+                                            //           height: height * 0.060,
+                                            //           decoration: BoxDecoration(
+                                            //             shape: BoxShape.circle,
+                                            //             color: Colors.grey[100],
+                                            //           ),
+                                            //           child: const Padding(
+                                            //             padding:
+                                            //                 EdgeInsets.all(8.0),
+                                            //             child: CircleAvatar(
+                                            //               radius: 72.0,
+                                            //               backgroundColor:
+                                            //                   Colors
+                                            //                       .transparent,
+                                            //               backgroundImage:
+                                            //                   AssetImage(
+                                            //                       'assets/images/LoginScreen/Google.png'),
+                                            //             ),
+                                            //           ),
+                                            //         ),
+                                            //         onTap: loginWithGoogle
+                                            //         //     () {
+                                            //         //   Navigator.push(
+                                            //         //       context,
+                                            //         //       MaterialPageRoute(
+                                            //         //           builder: (context) =>
+                                            //         //                Otpscreen(verificationId: "",)));
+                                            //         // }
+                                            //         ),
+                                            //   ],
+                                            // ),
                                           ],
                                         ),
                                       ),

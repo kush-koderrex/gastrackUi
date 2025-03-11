@@ -66,7 +66,9 @@ class Utils {
   static String battery = "0";
   static bool critical_flag =false;
   static String remainGas = "0";
-  //
+
+  static String hexstring = "";
+
   // static String serviceUUID = "9999";
   // static String writeCharacteristicUUID = "9191";
   // static String readCharacteristicUUID = "8888";
@@ -88,9 +90,9 @@ class Utils {
   static Future<void> onSubscribePressed(BluetoothCharacteristic characteristic) async {
     try {
       String op = characteristic.isNotifying == false ? "Subscribe" : "Unsubscribe";
+
       print("setNotifyValue operation: $op");
       print("Is notifying: ${characteristic.isNotifying}");
-
       // Toggle the notification state
       await characteristic.setNotifyValue(characteristic.isNotifying == false);
       Snackbar.show(ABC.c, "$op : Success", success: true);
@@ -101,7 +103,7 @@ class Utils {
         print("Descriptors: ${characteristic.descriptors.first}");
         await characteristic.read();
       } else {
-        developer.log("This characteristic does not support READ.");
+        developer.log("This characteristic does not support READ.2");
       }
 
       // Check if the characteristic supports notifications
@@ -173,8 +175,11 @@ class Utils {
     }
   }
 
-  static double emptyWeight = 14.8; // Empty weight of the cylinder
-  static double fullWeight = 29.0; // Full weight of the cylinder
+  // static double emptyWeight = 14.8; // Empty weight of the cylinder
+  // static double fullWeight = 29.0; // Full weight of the cylinder
+
+  static double emptyWeight = 1.0; // Empty weight of the cylinder
+  static double fullWeight = 5.0; // Full weight of the cylinder
 
 
   // Function to calculate the gas percentage based on current weight
@@ -192,10 +197,26 @@ class Utils {
   // static String writeCharacteristicUUID = "f000c0c1-0451-4000-b000-000000000000";
   // static String readCharacteristicUUID = "f000c0c2-0451-4000-b000-000000000000";
 
-  static late BluetoothCharacteristic Writecharacteristic;
-  static late BluetoothCharacteristic Readcharacteristic;
+  // static late BluetoothCharacteristic Writecharacteristic;
+  // static late BluetoothCharacteristic Readcharacteristic;
+  // static late BluetoothDevice device;
 
-  static late BluetoothDevice device;
+  static BluetoothDevice device = BluetoothDevice(remoteId: DeviceIdentifier("4C:26:AA:AC:C4:47"));
+
+  static BluetoothCharacteristic Writecharacteristic = BluetoothCharacteristic(
+    remoteId: DeviceIdentifier("4C:26:AA:AC:C4:47"),
+    serviceUuid: Guid("f000c0c0-0451-4000-b000-000000000000"),
+    characteristicUuid: Guid("000c0c1-0451-4000-b000-000000000000"),
+  );
+
+  static BluetoothCharacteristic Readcharacteristic = BluetoothCharacteristic(
+    remoteId: DeviceIdentifier("4C:26:AA:AC:C4:47"),
+    serviceUuid: Guid("f000c0c0-0451-4000-b000-000000000000"),
+    characteristicUuid: Guid("f000c0c2-0451-4000-b000-000000000000"),
+  );
+
+  static late String deviceId;
+
 
 
   static bool _isDeviceConnected = false;

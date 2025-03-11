@@ -1,56 +1,45 @@
 import 'dart:async';
-
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:gas_track_ui/MessagingController.dart';
 import 'package:gas_track_ui/permissions/bluetooth_off_screen.dart';
 import 'package:gas_track_ui/screen/AddManuallyDevice.dart';
 import 'package:gas_track_ui/screen/AddYouDevice.dart';
 import 'package:gas_track_ui/screen/CylinderDetailScreen.dart';
 import 'package:gas_track_ui/screen/DeviceAdded.dart';
-
 import 'package:gas_track_ui/screen/FirmwareUpdateScreen.dart';
 import 'package:gas_track_ui/screen/HomeScreen.dart';
 import 'package:gas_track_ui/screen/Login_Screen.dart';
 import 'package:gas_track_ui/screen/OtpScreen.dart';
 import 'package:gas_track_ui/screen/onBoardScreen.dart';
 import 'package:gas_track_ui/screen/splash_screen.dart';
-import 'package:gas_track_ui/test.dart';
 import 'package:gas_track_ui/utils/app_colors.dart';
-import 'package:permission_handler/permission_handler.dart';
-
 
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-FlutterLocalNotificationsPlugin();
+    FlutterLocalNotificationsPlugin();
+
 
 Future<void> main() async {
+
   WidgetsFlutterBinding.ensureInitialized();
-  // requestPermissions();
   await Firebase.initializeApp();
-  // FlutterBluePlus.setLogLevel(LogLevel.verbose, color: true);
+  await MessagingController().setupFirebase();
+  FlutterBluePlus.setLogLevel(LogLevel.verbose, color: true);
   FlutterBluePlus.setLogLevel(LogLevel.debug, color: true);
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp])
       .then((_) {
-
     runApp(const MyApp());
   });
 
-  // Initialization settings for Android
   const AndroidInitializationSettings initializationSettingsAndroid =
-  AndroidInitializationSettings('@mipmap/ic_launcher');
+      AndroidInitializationSettings('@mipmap/ic_launcher');
 
-  // Initialization settings for iOS
-  // const IOSInitializationSettings initializationSettingsIOS =
-  // IOSInitializationSettings();
-
-  // Initialize the plugin
-  const InitializationSettings initializationSettings =
-  InitializationSettings(
+  const InitializationSettings initializationSettings = InitializationSettings(
     android: initializationSettingsAndroid,
-    // iOS: initializationSettingsIOS,
   );
 
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
@@ -75,7 +64,6 @@ class _MyAppState extends State<MyApp> {
   static const String addYouDeviceScreen = 'addYouDeviceScreen';
   static const String deviceaddedScreen = 'deviceaddedScreen';
   static const String cylinderDetailScreen = 'cylinderDetailScreen';
-  // static const String recoverPassScr = 'recoverPassword';
 
   BluetoothAdapterState _adapterState = BluetoothAdapterState.unknown; // Default state
 
@@ -84,18 +72,15 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    // Listen to Bluetooth adapter state changes
-    _adapterStateSubscription =
-        FlutterBluePlus.adapterState.listen((state) {
-          setState(() {
-            _adapterState = state;
-          });
-        });
+    _adapterStateSubscription = FlutterBluePlus.adapterState.listen((state) {
+      setState(() {
+        _adapterState = state;
+      });
+    });
   }
 
   @override
   void dispose() {
-    // Cancel the Bluetooth state subscription when widget is disposed
     _adapterStateSubscription.cancel();
     super.dispose();
   }
@@ -119,15 +104,25 @@ class _MyAppState extends State<MyApp> {
           splashScr: (BuildContext context) => const SplashScreen(),
           loginScr: (BuildContext context) => const LoginScreen(),
           onboardScr: (BuildContext context) => const OnBoardScreen(),
-          otpscreen: (BuildContext context) =>  Otpscreen(verificationId: "", phoneNumber: '',),
+          otpscreen: (BuildContext context) => const Otpscreen(
+                verificationId: "",
+                phoneNumber: '',
+              ),
           homescreen: (BuildContext context) => const Homescreen(),
-          firmwareUpdateScreen: (BuildContext context) => const FirmwareUpdateScreen(),
-          addManuallyDeviceScreen: (BuildContext context) => const AddManuallyDeviceScreen(),
-          addYouDeviceScreen: (BuildContext context) => const AddYouDeviceScreen(),
-          deviceaddedScreen: (BuildContext context) => const DeviceaddedScreen(),
-          cylinderDetailScreen: (BuildContext context) => const CylinderDetailScreen(),
+          firmwareUpdateScreen: (BuildContext context) =>
+              const FirmwareUpdateScreen(),
+          addManuallyDeviceScreen: (BuildContext context) =>
+              const AddManuallyDeviceScreen(),
+          addYouDeviceScreen: (BuildContext context) =>
+              const AddYouDeviceScreen(),
+          deviceaddedScreen: (BuildContext context) =>
+              const DeviceaddedScreen(),
+          cylinderDetailScreen: (BuildContext context) =>
+              const CylinderDetailScreen(),
         },
+
         initialRoute: splashScr,
+        // initialRoute: homescreen,
         navigatorKey: navigatorKey,
         // home: const MyHomePage(title: 'Gas Track'),
         home: screen,
@@ -135,8 +130,6 @@ class _MyAppState extends State<MyApp> {
     );
   }
 }
-
-
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -161,8 +154,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-
-
     return Scaffold(
       backgroundColor: AppColors.white,
       appBar: AppBar(

@@ -1,222 +1,174 @@
-// import 'package:fl_chart/fl_chart.dart';
 // import 'package:flutter/material.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:intl/intl.dart';
 //
-// void main() {
-//   runApp(const MyApp());
-// }
+// class DaysOfUseCalculator {
+//   /// Calculates days of use based on critical_flag and reading_date
+//   ///
+//   /// Returns a Map with dates as keys and days of use as values
+//   static Future<Map<DateTime, int>> calculateDaysOfUse(String collectionPath) async {
+//     // Get data from Firestore
+//     final QuerySnapshot snapshot = await FirebaseFirestore.instance
+//         .collection(collectionPath)
+//         .orderBy('reading_date')
+//         .get();
 //
-// class MyApp extends StatelessWidget {
-//   const MyApp({super.key});
+//     // Convert the snapshot to a list of maps
+//     final List<Map<String, dynamic>> data = snapshot.docs
+//         .map((doc) => doc.data() as Map<String, dynamic>)
+//         .toList();
 //
-//   @override
-//   Widget build(BuildContext context) {
-//     return MaterialApp(
-//       home: Scaffold(
-//         appBar: AppBar(title: const Text('Dynamic Bar Graphs')),
-//         body: Column(
-//           children: const [
-//             Expanded(child: DayGraph()), // Dynamic Day Graph
-//             Expanded(child: WeeklyGraph()), // Dynamic Weekly Graph
-//             Expanded(child: MonthGraph()), // Dynamic Month Graph
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
+//     // Sort the data by reading_date
+//     data.sort((a, b) {
+//       final DateTime dateA = _parseDate(a['reading_date']);
+//       final DateTime dateB = _parseDate(b['reading_date']);
+//       return dateA.compareTo(dateB);
+//     });
 //
-// class _BarChart extends StatelessWidget {
-//   final List<BarChartGroupData> barGroups;
-//   final Widget Function(double, TitleMeta) getXTitles;
-//   final double maxY;
+//     // Calculate days of use
+//     final Map<DateTime, int> daysOfUse = {};
+//     int currentDaysCount = 0;
+//     DateTime? previousDate;
+//     bool previousWasCritical = false;
 //
-//   const _BarChart({
-//     required this.barGroups,
-//     required this.getXTitles,
-//     required this.maxY,
-//   });
+//     for (var entry in data) {
+//       final bool isCritical = entry['critical_flag'] == true;
+//       final DateTime currentDate = _parseDate(entry['reading_date']);
 //
-//   @override
-//   Widget build(BuildContext context) {
-//     return BarChart(
-//       BarChartData(
-//         barTouchData: barTouchData,
-//         titlesData: FlTitlesData(
-//           bottomTitles: AxisTitles(
-//             sideTitles: SideTitles(
-//               showTitles: true,
-//               getTitlesWidget: getXTitles,
-//             ),
-//           ),
-//           leftTitles: AxisTitles(
-//             sideTitles: SideTitles(
-//               showTitles: true,
-//               reservedSize: 40,
-//               getTitlesWidget: getYTitles,
-//             ),
-//           ),
-//           topTitles: const AxisTitles(
-//             sideTitles: SideTitles(showTitles: false),
-//           ),
-//           rightTitles: const AxisTitles(
-//             sideTitles: SideTitles(showTitles: false),
-//           ),
-//         ),
-//         borderData: borderData,
-//         barGroups: barGroups,
-//         alignment: BarChartAlignment.spaceAround,
-//         maxY: maxY,
-//         gridData: FlGridData(
-//           show: true,
-//           drawVerticalLine: false,
-//           horizontalInterval: 10,
-//           getDrawingHorizontalLine: (value) => FlLine(
-//             color: Colors.grey.withOpacity(0.5),
-//             strokeWidth: 1,
-//           ),
-//         ),
-//       ),
-//     );
+//       // If this is the first entry
+//       if (previousDate == null) {
+//         currentDaysCount = 1;
+//       }
+//       // If this is a consecutive day (one day after the previous)
+//       else if (_isConsecutiveDay(previousDate, currentDate)) {
+//         // If current entry is critical and previous was not critical, reset counter
+//         if (isCritical && !previousWasCritical) {
+//           currentDaysCount = 1;
+//         }
+//         // Otherwise, if it's a consecutive day and not resetting, increment the counter
+//         else if (!isCritical) {
+//           currentDaysCount++;
+//         }
+//         // If both current and previous are critical, counter remains the same
+//       }
+//       // If date gap is more than 1 day
+//       else {
+//         // Reset the counter for non-consecutive days
+//         currentDaysCount = 1;
+//       }
+//
+//       // Store the days of use for this date
+//       daysOfUse[currentDate] = currentDaysCount;
+//
+//       // Update previous values for next iteration
+//       previousDate = currentDate;
+//       previousWasCritical = isCritical;
+//     }
+//
+//     return daysOfUse;
 //   }
 //
-//   BarTouchData get barTouchData => BarTouchData(
-//     enabled: false,
-//     touchTooltipData: BarTouchTooltipData(
-//       tooltipPadding: EdgeInsets.zero,
-//       tooltipMargin: 8,
-//       getTooltipItem: (group, groupIndex, rod, rodIndex) {
-//         return BarTooltipItem(
-//           rod.toY.round().toString(),
-//           const TextStyle(
-//             color: Colors.cyan,
-//             fontWeight: FontWeight.bold,
-//           ),
-//         );
-//       },
-//     ),
-//   );
+//   /// Parses date string (e.g., "2-Mar") into a DateTime object
+//   /// Assumes current year if not specified
+//   static DateTime _parseDate(String dateStr) {
+//     // Add current year if not present
+//     if (!dateStr.contains('-')) {
+//       dateStr = "$dateStr-${DateTime.now().year}";
+//     } else if (dateStr.split('-').length == 2) {
+//       dateStr = "$dateStr-${DateTime.now().year}";
+//     }
 //
-//   static Widget getYTitles(double value, TitleMeta meta) {
-//     const style = TextStyle(
-//       color: Colors.blueGrey,
-//       fontWeight: FontWeight.bold,
-//       fontSize: 12,
-//     );
-//     if (value % 20 == 0) {
-//       return SideTitleWidget(
-//         axisSide: meta.axisSide,
-//         space: 6,
-//         child: Text(value.toInt().toString(), style: style),
-//       );
-//     } else {
-//       return Container();
+//     // Try parsing with different formats
+//     try {
+//       return DateFormat("d-MMM-yyyy").parse(dateStr);
+//     } catch (e) {
+//       try {
+//         return DateFormat("dd-MMM-yyyy").parse(dateStr);
+//       } catch (e) {
+//         throw FormatException("Unable to parse date: $dateStr");
+//       }
 //     }
 //   }
 //
-//   static FlBorderData get borderData => FlBorderData(
-//     show: false,
-//   );
+//   /// Checks if two dates are consecutive (one day apart)
+//   static bool _isConsecutiveDay(DateTime date1, DateTime date2) {
+//     final difference = date2.difference(date1).inDays;
+//     return difference == 1;
+//   }
 //
-//   static LinearGradient get _barsGradient => const LinearGradient(
-//     colors: [Color(0xFFC54239), Color(0xFF7A2AAE)],
-//     begin: Alignment.topLeft,
-//     end: Alignment.bottomRight,
-//   );
+//   /// Helper method to format results for UI display
+//   static String formatDaysOfUseResult(Map<DateTime, int> daysOfUse) {
+//     final buffer = StringBuffer();
+//     final dateFormat = DateFormat("d-MMM");
 //
-//   static List<BarChartGroupData> generateBarGroups(List<double> values) {
-//     return List.generate(values.length, (index) {
-//       return BarChartGroupData(
-//         x: index,
-//         barRods: [
-//           BarChartRodData(
-//             toY: values[index],
-//             gradient: _barsGradient,
-//             width: 25,
-//           )
-//         ],
-//       );
+//     daysOfUse.forEach((date, days) {
+//       buffer.writeln('on ${dateFormat.format(date)}, days of use = $days');
 //     });
-//   }
 //
-//   static Widget getDayXTitles(double value, TitleMeta meta) {
-//     const style = TextStyle(color: Colors.black, fontSize: 12);
-//     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-//     return SideTitleWidget(
-//       axisSide: meta.axisSide,
-//       child: Text(days[value.toInt() % days.length], style: style),
-//     );
-//   }
-//
-//   static Widget getWeeklyXTitles(double value, TitleMeta meta) {
-//     const style = TextStyle(color: Colors.black, fontSize: 12);
-//     const weeks = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-//     return SideTitleWidget(
-//       axisSide: meta.axisSide,
-//       child: Text(weeks[value.toInt() % weeks.length], style: style),
-//     );
-//   }
-//
-//   static Widget getMonthXTitles(double value, TitleMeta meta) {
-//     const style = TextStyle(color: Colors.black, fontSize: 12);
-//     const months = [
-//       'Jan',
-//       'Feb',
-//       'Mar',
-//       'Apr',
-//       'May',
-//       'Jun',
-//       'Jul',
-//       'Aug',
-//       'Sep',
-//       'Oct',
-//       'Nov',
-//       'Dec'
-//     ];
-//     return SideTitleWidget(
-//       axisSide: meta.axisSide,
-//       child: Text(months[value.toInt() % months.length], style: style),
-//     );
+//     return buffer.toString();
 //   }
 // }
 //
-// class DayGraph extends StatelessWidget {
-//   const DayGraph({super.key});
+// // Example usage in a Flutter widget
+// class DaysOfUseDisplay extends StatefulWidget {
+//   final String collectionPath;
+//
+//   const DaysOfUseDisplay({Key? key, required this.collectionPath}) : super(key: key);
 //
 //   @override
-//   Widget build(BuildContext context) {
-//     List<double> dailyValues = [50, 70, 90, 40, 60, 30, 80]; // Example dynamic data
-//     return _BarChart(
-//       barGroups: _BarChart.generateBarGroups(dailyValues),
-//       getXTitles: _BarChart.getDayXTitles,
-//       maxY: 100,
-//     );
-//   }
+//   _DaysOfUseDisplayState createState() => _DaysOfUseDisplayState();
 // }
 //
-// class WeeklyGraph extends StatelessWidget {
-//   const WeeklyGraph({super.key});
+// class _DaysOfUseDisplayState extends State<DaysOfUseDisplay> {
+//   late Future<Map<DateTime, int>> _daysOfUseFuture;
 //
 //   @override
-//   Widget build(BuildContext context) {
-//     List<double> weeklyValues = [30, 50, 70, 20, 90, 60, 40]; // Example dynamic data
-//     return _BarChart(
-//       barGroups: _BarChart.generateBarGroups(weeklyValues),
-//       getXTitles: _BarChart.getWeeklyXTitles,
-//       maxY: 100,
-//     );
+//   void initState() {
+//     super.initState();
+//     _daysOfUseFuture = DaysOfUseCalculator.calculateDaysOfUse(widget.collectionPath);
 //   }
-// }
-//
-// class MonthGraph extends StatelessWidget {
-//   const MonthGraph({super.key});
 //
 //   @override
 //   Widget build(BuildContext context) {
-//     List<double> monthlyValues = [50, 70, 90, 30, 80, 60, 100, 40, 70, 90, 80, 60]; // Example dynamic data
-//     return _BarChart(
-//       barGroups: _BarChart.generateBarGroups(monthlyValues),
-//       getXTitles: _BarChart.getMonthXTitles,
-//       maxY: 120,
+//     return FutureBuilder<Map<DateTime, int>>(
+//       future: _daysOfUseFuture,
+//       builder: (context, snapshot) {
+//         if (snapshot.connectionState == ConnectionState.waiting) {
+//           return const Center(child: CircularProgressIndicator());
+//         }
+//
+//         if (snapshot.hasError) {
+//           return Center(child: Text('Error: ${snapshot.error}'));
+//         }
+//
+//         if (!snapshot.hasData || snapshot.data!.isEmpty) {
+//           return const Center(child: Text('No data available'));
+//         }
+//
+//         // Display results
+//         final daysOfUse = snapshot.data!;
+//         final formattedResults = DaysOfUseCalculator.formatDaysOfUseResult(daysOfUse);
+//
+//         return SingleChildScrollView(
+//           child: Padding(
+//             padding: const EdgeInsets.all(16.0),
+//             child: Column(
+//               crossAxisAlignment: CrossAxisAlignment.start,
+//               children: [
+//                 const Text(
+//                   'Days of Use Results',
+//                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+//                 ),
+//                 const SizedBox(height: 16),
+//                 Text(
+//                   formattedResults,
+//                   style: const TextStyle(fontSize: 16, height: 1.5),
+//                 ),
+//               ],
+//             ),
+//           ),
+//         );
+//       },
 //     );
 //   }
 // }

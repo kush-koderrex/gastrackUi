@@ -1,4 +1,3 @@
-
 package com.example.gas_track_ui
 import android.Manifest
 import android.app.NotificationChannel
@@ -51,13 +50,10 @@ import java.io.FileOutputStream
 import java.io.IOException
 import android.content.ContentValues
 import java.util.*
-
-
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.DocumentReference
 
@@ -81,7 +77,9 @@ class MainActivity : FlutterActivity() {
                 val formattedTimestamp = LocalDateTime.now().format(formatter)
                 if (call.method == "launchPeriodicTask") {
                     val deviceName = call.argument<String>("device")?: "Project_RED_TTTP"
-                    val duration=call.argument<Int>("duration")?: 15
+//                    val deviceName = call.argument<String>("device")?: "BLE Device"
+//                    val duration=call.argument<Int>("duration")?: 15
+                    val duration=1
                     requestPermissions()
                     launchPeriodicTask(deviceName,duration)
                     result.success("Successfully launched at: $formattedTimestamp")
@@ -125,16 +123,13 @@ class MainActivity : FlutterActivity() {
                 val fileNameWithTimestamp = fileName.replace(".csv", "_$timestamp.csv")
 
                 try {
-                    // Use MediaStore to add file to Downloads directory
                     val resolver = context.contentResolver
                     val contentValues = ContentValues().apply {
                         put(MediaStore.Downloads.DISPLAY_NAME, fileNameWithTimestamp)
                         put(MediaStore.Downloads.MIME_TYPE, "text/csv")
                         put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
                     }
-
                     val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-
                     if (uri != null) {
                         resolver.openOutputStream(uri).use { outputStream ->
                             FileInputStream(sourceFile).use { inputStream ->
@@ -147,7 +142,6 @@ class MainActivity : FlutterActivity() {
                     } else {
                         Log.e("LOGS", "Failed to create URI for $fileNameWithTimestamp.")
                         return "Failed to download log files"
-
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -176,22 +170,6 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-//    private fun uploadLogData(logType: String, content: String) {
-//        val logData = hashMapOf(
-//            "timestamp" to System.currentTimeMillis(),
-//            "logType" to logType,
-//            "content" to content
-//        )
-//        firestoreDatabase.collection("logs")
-//            .add(logData)
-//            .addOnSuccessListener {
-//                Log.d("Firebase", "Log uploaded successfully.")
-//            }
-//            .addOnFailureListener { e ->
-//                Log.e("Firebase", "Error uploading log: ${e.message}")
-//            }
-//    }
-
 
     private fun viewLogs(): String {
         val logFile = File(applicationContext.filesDir, "gastrack_logs.csv")
@@ -204,6 +182,7 @@ class MainActivity : FlutterActivity() {
             return "Log File does not exist"
         }
     }
+
     private fun deleteLogs(): String {
         val logFile = File(applicationContext.filesDir, "gastrack_logs.csv")
         val directory=applicationContext?.filesDir
@@ -309,8 +288,6 @@ class SampleWorker(appContext: Context, params: WorkerParameters) : Worker(appCo
     }
 
 
-
-
     private suspend fun uploadLogData(
         customerId: String,
         weight: String,
@@ -331,7 +308,7 @@ class SampleWorker(appContext: Context, params: WorkerParameters) : Worker(appCo
                 "reading_date" to readingDate
             )
 
-            Log.d("Firebase", "readingData:-$readingData")
+            Log.d("Firebase worker", "readingData:-$readingData")
 
 
 
@@ -342,12 +319,12 @@ class SampleWorker(appContext: Context, params: WorkerParameters) : Worker(appCo
                     "last_update_date" to FieldValue.serverTimestamp()
                 )
             ).addOnSuccessListener {
-                Log.d("Firebase", "Gas readings updated successfully")
+                Log.d("Firebase worker", "Gas readings updated successfully")
             }.addOnFailureListener { e ->
-                Log.e("Firebase", "Error updating gas readings: ${e.message}")
+                Log.e("Firebase worker", "Error updating gas readings: ${e.message}")
             }
         } catch (e: Exception) {
-            Log.e("Firebase", "Exception updating gas readings: ${e.message}")
+            Log.e("Firebase worker", "Exception updating gas readings: ${e.message}")
         }
     }
 
@@ -424,6 +401,7 @@ class SampleWorker(appContext: Context, params: WorkerParameters) : Worker(appCo
             if (bluetoothAdapter != null && bluetoothAdapter.isEnabled) {
                 logDeviceData(listOf(formattedTimestamp,"BLE Scan Initiated"))
                 val deviceName = inputData.getString("device") ?: "Project_RED_TTTP"
+//                val deviceName = inputData.getString("device") ?: "BLE Device"
                 startBLEScan(bluetoothAdapter,deviceName)
                 return Result.success()
             } else {
@@ -652,7 +630,7 @@ class SampleWorker(appContext: Context, params: WorkerParameters) : Worker(appCo
                     val reqCode = data?.substring(6, 8) // 1 byte -> 2 hex digits
                     val dataLength = data?.substring(8, 10) // 1 byte -> 2 hex digits
                     val beforeDecimal = data?.substring(10, 12)?.toInt(16)
-                    val afterDecimal = data?.substring(12, 14)
+                    val afterDecimal = data?.substring(12, 14)?.toInt(16)
                     val weight = "$beforeDecimal.$afterDecimal"
 //                    val voltage = data?.substring(14, 16)?.toInt(16)?.div(10.0) ?: 0.0
                     val buzzer = data?.substring(16, 18) == "00"
@@ -699,7 +677,8 @@ class SampleWorker(appContext: Context, params: WorkerParameters) : Worker(appCo
                             Log.e("BackremainGas", "Value: $remainGas")
 
                             uploadLogData(
-                                customerId = "jarvis.ai.kush@gmail.com",
+//                                customerId = "jarvis.ai.kush@gmail.com",
+                                customerId = "gastrack.india@gmail.com",
                                 weight = "$weight",
                                 battery = "$battery",
                                 remainGas = "$remainGas",
@@ -775,7 +754,8 @@ class SampleWorker(appContext: Context, params: WorkerParameters) : Worker(appCo
                                 Log.e("BackremainGas", "Value: $remainGas")
 
                                 uploadLogData(
-                                    customerId = "jarvis.ai.kush@gmail.com",
+//                                    customerId = "jarvis.ai.kush@gmail.com",
+                                    customerId = "gastrack.india@gmail.com",
                                     weight = "$weight",
                                     battery = "$battery",
                                     remainGas = "$remainGas",

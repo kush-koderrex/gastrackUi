@@ -1,10 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:gas_track_ui/LocalStorage.dart';
+import 'package:gas_track_ui/screen/CalibrationScreen.dart';
 import 'package:gas_track_ui/screen/CylinderDetailScreen.dart';
 import 'package:gas_track_ui/screen/EditProfile.dart';
 import 'package:gas_track_ui/screen/Firmware.dart';
 import 'package:gas_track_ui/screen/Login_Screen.dart';
+import 'package:gas_track_ui/screen/SuccessScreen.dart';
 import 'package:gas_track_ui/utils/utils.dart';
 import 'package:slidable_button/slidable_button.dart';
 import 'package:slider_button/slider_button.dart';
@@ -48,7 +50,6 @@ Color blendWithWhite(Color color, [double amount = 0.2]) => Color.fromARGB(
 //       .join('&');
 // }
 
-
 void _sendEmail(String email, String subject, String body) async {
   final Uri emailUri = Uri(
     scheme: 'mailto',
@@ -65,7 +66,6 @@ void _sendEmail(String email, String subject, String body) async {
     throw 'Could not launch $emailUri';
   }
 }
-
 
 class _MenuScreenState extends State<MenuScreen> {
   @override
@@ -89,11 +89,6 @@ class _MenuScreenState extends State<MenuScreen> {
         "toggle": true
       },
       {
-        "name": "Auto Booking",
-        "image": "assets/images/ListIcons/autobooking.png",
-        "toggle": true
-      },
-      {
         "name": "Firmware Update",
         "image": "assets/images/ListIcons/firmware.png",
         "toggle": false
@@ -108,6 +103,11 @@ class _MenuScreenState extends State<MenuScreen> {
         "image": "assets/images/ListIcons/factoryReset.png",
         "toggle": false
       },
+      {
+        "name": "Logout",
+        "image": "assets/images/ListIcons/autobooking.png",
+        "toggle": false
+      },
     ];
 
     return Scaffold(
@@ -116,18 +116,16 @@ class _MenuScreenState extends State<MenuScreen> {
           "My Menu",
           style: AppStyles.appBarTextStyle,
         ),
-        backgroundColor: Colors.transparent, // Makes the background transparent
-        elevation: 0, // Removes the shadow below the AppBar
-        centerTitle: true, // Optional: centers the title
-        iconTheme: const IconThemeData(
-            color: Colors.white), // Makes the back arrow white
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
         titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20),
       ),
-      extendBodyBehindAppBar: true, // Ensures the body goes behind the AppBar
+      extendBodyBehindAppBar: true,
       body: SingleChildScrollView(
         child: Stack(
           children: [
-            // Gradient with Custom Clip Path at the top of the screen
             ClipPath(
               clipper:
                   TopRoundedRectangleClipper(), // Custom clipper for the top curve
@@ -145,9 +143,9 @@ class _MenuScreenState extends State<MenuScreen> {
                 ),
               ),
             ),
-        
             Padding(
-              padding: EdgeInsets.only(top: height / 9.5), // Adjust for gradient
+              padding:
+                  EdgeInsets.only(top: height / 9.5), // Adjust for gradient
               child: Container(
                 height: height,
                 width: width,
@@ -186,7 +184,8 @@ class _MenuScreenState extends State<MenuScreen> {
                                   padding: const EdgeInsets.all(10.0),
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.start,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         " ${Utils.device.platformName}",
@@ -227,7 +226,8 @@ class _MenuScreenState extends State<MenuScreen> {
                                     child: ListView.builder(
                                       physics:
                                           const NeverScrollableScrollPhysics(),
-                                      padding: EdgeInsets.zero, // Remove padding
+                                      padding:
+                                          EdgeInsets.zero, // Remove padding
                                       itemCount: items.length,
                                       itemBuilder: (context, index) {
                                         return Padding(
@@ -271,7 +271,7 @@ class _MenuScreenState extends State<MenuScreen> {
                                                     30, // Adjust radius for avatar
                                               ),
                                             ),
-        
+
                                             title: Text(
                                               items[index]['name'],
                                               style: AppStyles.customTextStyle(
@@ -282,7 +282,8 @@ class _MenuScreenState extends State<MenuScreen> {
                                             trailing: items[index]['toggle']
                                                 ? Switch(
                                                     // Display Switch when toggle is true
-                                                    value: items[index]['toggle'],
+                                                    value: items[index]
+                                                        ['toggle'],
                                                     onChanged: (value) {
                                                       setState(() {
                                                         items[index]['toggle'] =
@@ -295,14 +296,14 @@ class _MenuScreenState extends State<MenuScreen> {
                                                 : const Icon(Icons
                                                     .chevron_right), // Display Icon when toggle is false
                                             onTap: () {
-                                              _handleMenuItemTap(
-                                                  context, items[index]['name']);
+                                              _handleMenuItemTap(context,
+                                                  items[index]['name']);
                                             },
                                           ),
                                         );
                                       },
                                     ),
-        
+
                                     // ListView.builder(
                                     //   physics:
                                     //       const NeverScrollableScrollPhysics(),
@@ -359,10 +360,12 @@ class _MenuScreenState extends State<MenuScreen> {
                                   ),
                                 ),
                                 Padding(
-                                  padding: const EdgeInsets.only(left: 20.0, top: 10),
+                                  padding: const EdgeInsets.only(
+                                      left: 20.0, top: 10),
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.start,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         "Contact Us",
@@ -371,11 +374,12 @@ class _MenuScreenState extends State<MenuScreen> {
                                             fontWeight: FontWeight.w500),
                                       ),
                                       Padding(
-                                        padding: const EdgeInsets.only(top: 8.0),
+                                        padding:
+                                            const EdgeInsets.only(top: 8.0),
                                         child: InkWell(
                                           onTap: () {
-
-                                            _sendEmail('gastrack.india@gmail.com',
+                                            _sendEmail(
+                                                'gastrack.india@gmail.com',
                                                 'Hello from Gas Track',
                                                 'This is a test email.');
                                             // _launchEmail(
@@ -387,16 +391,19 @@ class _MenuScreenState extends State<MenuScreen> {
                                             children: [
                                               const Icon(
                                                 Icons.mail,
-                                                color: AppStyles.cutstomIconColor,
+                                                color:
+                                                    AppStyles.cutstomIconColor,
                                               ),
                                               const SizedBox(
                                                 width: 5,
                                               ),
                                               Text(
                                                 "gastrack.india@gmail.com",
-                                                style: AppStyles.customTextStyle(
-                                                    fontSize: 14.0,
-                                                    fontWeight: FontWeight.w400),
+                                                style:
+                                                    AppStyles.customTextStyle(
+                                                        fontSize: 14.0,
+                                                        fontWeight:
+                                                            FontWeight.w400),
                                               ),
                                             ],
                                           ),
@@ -408,63 +415,63 @@ class _MenuScreenState extends State<MenuScreen> {
                                 const SizedBox(
                                   height: 20,
                                 ),
-                                Center(
-                                  child: InkWell(
-                                    onTap: () async {
-                                    await UserPreferences().clearUserData();
-
-                                      // final prefs = await SharedPreferences.getInstance();
-                                      // await prefs.clear(); // Clear user session or token
-                                      Navigator.pushAndRemoveUntil(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => const LoginScreen(), // Navigate to LoginScreen
-                                        ),
-                                            (route) => false, // Remove all previous routes
-                                      );
-                                    },
-                                    child: Container(
-                                      width: 250,
-                                      height: 40,
-                                      decoration: BoxDecoration(
-                                        gradient: const LinearGradient(
-                                          colors: [
-                                            Color(0xFFFA7365), // Gradient start color
-                                            Color(0xFF9A4DFF), // Gradient end color
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        ),
-                                        borderRadius: BorderRadius.circular(25), // Rounded corners
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(0.2),
-                                            blurRadius: 8,
-                                            offset: const Offset(2, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: const Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.logout, // Logout icon
-                                            color: Colors.white,
-                                          ),
-                                          SizedBox(width: 10), // Space between icon and text
-                                          Text(
-                                            "Logout",
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                                // Center(
+                                //   child: InkWell(
+                                //     onTap: () async {
+                                //     await UserPreferences().clearUserData();
+                                //
+                                //       // final prefs = await SharedPreferences.getInstance();
+                                //       // await prefs.clear(); // Clear user session or token
+                                //       Navigator.pushAndRemoveUntil(
+                                //         context,
+                                //         MaterialPageRoute(
+                                //           builder: (context) => const LoginScreen(), // Navigate to LoginScreen
+                                //         ),
+                                //             (route) => false, // Remove all previous routes
+                                //       );
+                                //     },
+                                //     child: Container(
+                                //       width: 250,
+                                //       height: 40,
+                                //       decoration: BoxDecoration(
+                                //         gradient: const LinearGradient(
+                                //           colors: [
+                                //             Color(0xFFFA7365), // Gradient start color
+                                //             Color(0xFF9A4DFF), // Gradient end color
+                                //           ],
+                                //           begin: Alignment.topLeft,
+                                //           end: Alignment.bottomRight,
+                                //         ),
+                                //         borderRadius: BorderRadius.circular(25), // Rounded corners
+                                //         boxShadow: [
+                                //           BoxShadow(
+                                //             color: Colors.black.withOpacity(0.2),
+                                //             blurRadius: 8,
+                                //             offset: const Offset(2, 2),
+                                //           ),
+                                //         ],
+                                //       ),
+                                //       child: const Row(
+                                //         mainAxisAlignment: MainAxisAlignment.center,
+                                //         children: [
+                                //           Icon(
+                                //             Icons.logout, // Logout icon
+                                //             color: Colors.white,
+                                //           ),
+                                //           SizedBox(width: 10), // Space between icon and text
+                                //           Text(
+                                //             "Logout",
+                                //             style: TextStyle(
+                                //               color: Colors.white,
+                                //               fontSize: 16,
+                                //               fontWeight: FontWeight.bold,
+                                //             ),
+                                //           ),
+                                //         ],
+                                //       ),
+                                //     ),
+                                //   ),
+                                // ),
 
                                 const SizedBox(
                                   height: 20,
@@ -509,7 +516,8 @@ class _MenuScreenState extends State<MenuScreen> {
         // ScaffoldMessenger.of(context)
         //     .showSnackBar(SnackBar(content: Text("Device Sound tapped")));
         break;
-      case "Auto Booking":
+      case "Logout":
+        logout(context);
         // Navigate to auto booking options or perform an action
         // ScaffoldMessenger.of(context)
         //     .showSnackBar(SnackBar(content: Text("Auto Booking tapped")));
@@ -576,6 +584,20 @@ class TopRoundedRectangleClipper extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(CustomClipper<Path> oldClipper) => false;
+}
+
+void logout(context) async {
+  await UserPreferences().clearUserData();
+
+// final prefs = await SharedPreferences.getInstance();
+// await prefs.clear(); // Clear user session or token
+  Navigator.pushAndRemoveUntil(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const LoginScreen(), // Navigate to LoginScreen
+    ),
+    (route) => false, // Remove all previous routes
+  );
 }
 
 void showCustomDialogRest(BuildContext context) {
@@ -945,9 +967,22 @@ void showCustomDialogRest(BuildContext context) {
                     if (position == SlidableButtonPosition.end) {
                       print("Reset");
                       Navigator.of(context).pop();
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>  SuccessScreen(false),
+                        ),
+                      );
                     } else if (position == SlidableButtonPosition.start) {
                       print("Calibrate");
                       Navigator.of(context).pop();
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          // builder: (context) => const AddYouDeviceScreen(),
+                          builder: (context) => const CalibrationScreen(),
+                        ),
+                      );
                     } else {
                       // result = 'Button is in the middle';
                     }

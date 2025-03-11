@@ -9,7 +9,8 @@ class BLETaskScreen extends StatefulWidget {
 class _BLETaskScreenState extends State<BLETaskScreen> {
   static const platform = MethodChannel('com.gastrack.background/gtrack_process');
 
-  final TextEditingController _deviceNameController = TextEditingController(text: "BLE Device");
+  // final TextEditingController _deviceNameController = TextEditingController(text: "BLE Device");
+  final TextEditingController _deviceNameController = TextEditingController(text: "Project_RED_TTTP");
   final TextEditingController _durationController = TextEditingController(text: "15");
   final TextEditingController _serviceUUIDController = TextEditingController(text: "9999");
   final TextEditingController _characteristicUUIDController = TextEditingController(text: "8888");

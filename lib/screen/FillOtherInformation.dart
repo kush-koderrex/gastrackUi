@@ -18,7 +18,7 @@ class _FullOtherInformationState extends State<FullOtherInformation> {
 
   final _formKey = GlobalKey<FormState>();
 
-  final _deviceNameController = TextEditingController(text: Utils.device.platformName);
+  final _deviceNameController = TextEditingController(text: Utils.device?.platformName);
   final _gasCompanyNameController = TextEditingController();
   final _gasConsumerNumberController = TextEditingController();
   final firestoreService = FirestoreService();

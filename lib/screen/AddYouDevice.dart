@@ -1,6 +1,9 @@
 import 'package:easy_stepper/easy_stepper.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:gas_track_ui/LocalStorage.dart';
+import 'package:gas_track_ui/MessagingController.dart';
+import 'package:gas_track_ui/Services/FirebaseSevice.dart';
 import 'package:gas_track_ui/screen/AddManuallyDevice.dart';
 import 'package:gas_track_ui/screen/DeviceSearchScreen.dart';
 import 'package:gas_track_ui/screen/OtpScreen.dart';
@@ -16,6 +19,16 @@ class AddYouDeviceScreen extends StatefulWidget {
 }
 
 class _AddYouDeviceScreenState extends State<AddYouDeviceScreen> {
+
+
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    MessagingController().updateFirebaseToken();
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     var height = MediaQuery.of(context).size.height;

@@ -52,6 +52,7 @@ dependencies:
   provider: ^6.1.2
   crypto: ^3.0.5
   flutter_facebook_auth: ^7.1.1
+  bot_toast: any
   google_sign_in: ^6.2.1
   slider_button: ^2.1.0
   slidable_button: ^3.0.0+1
@@ -64,6 +65,8 @@ dependencies:
   vibration: ^1.9.0
   flutter_launcher_icons: any
   flutter_local_notifications: ^18.0.1
+  firebase_messaging: any
+  firebase_crashlytics: any
 
 
 
@@ -84,6 +87,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^3.0.0
+  logger: ^2.5.0
 
 
 
@@ -128,6 +132,8 @@ flutter:
     - assets/images/Firmware/firmware.png
     - assets/images/HomeScreen/settingIcon.png
     - assets/images/Firmware/firmwareUpdate.gif
+    - assets/images/svg/settingicon.svg
+    - assets/images/arrow.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:gas_track_ui/LocalStorage.dart';
+import 'package:gas_track_ui/Services/FirebaseSevice.dart';
 import 'package:gas_track_ui/screen/FillOtherInformation.dart';
-import 'package:gas_track_ui/utils/extra.dart';
 import 'package:gas_track_ui/utils/snackbar.dart';
 import 'package:gas_track_ui/utils/utils.dart';
 import 'package:intl/intl.dart';
@@ -12,6 +13,7 @@ import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'dart:developer' as developer;
 
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
 
 class DeviceResponse {
@@ -56,6 +58,8 @@ Future<void> requestPermissions() async {
     Permission.bluetoothScan,
     Permission.location,
     Permission.storage, // Add storage permission
+    Permission.notification
+
   ].request();
 }
 
@@ -101,89 +105,158 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
   // double gasPercentage = 0.0; // Percentage of gas remaining
 
   // Function to calculate gas percentage based on current weight
-  double calculateGasPercentage(double currentWeight) {
-    if (currentWeight < emptyWeight) {
-      return 0.0; // Prevent negative percentages if weight is below empty
-    }
-    return ((currentWeight - emptyWeight) / (fullWeight - emptyWeight)) * 100;
-  }
-
-  Future onWritePressedgenreq(BluetoothCharacteristic characteristic) async {
-    try {
-      await characteristic.write(
-          [0x40, 0xA8, 0x00, 0x01, 0x01, 0x01, 0xAA, 0x55],
-          withoutResponse: characteristic.properties.writeWithoutResponse,
-          allowLongWrite: true);
-      // await c.write([0xa, 0x1, 0x2, 0x3c, 0x1, 0x37, 0xaa, 0x37], withoutResponse: c.properties.writeWithoutResponse);
-      Snackbar.show(ABC.c, "Write: Success", success: true);
-      print("General Request Send :-${characteristic}");
-      if (characteristic.properties.read) {
-        await characteristic.read();
-      }
-    } catch (e) {
-      Snackbar.show(ABC.c, prettyException("Write Error:", e), success: false);
-    }
-  }
-
-  Future onSubscribePressed(BluetoothCharacteristic characteristic) async {
-    try {
-      String op =
-          characteristic.isNotifying == false ? "Subscribe" : "Unubscribe";
-      print("setNotifyValueop");
-      print(op);
-      print(characteristic.isNotifying == false);
-
-      await characteristic.setNotifyValue(characteristic.isNotifying == false);
-      Snackbar.show(ABC.c, "$op : Success", success: true);
-      developer.log("Subscribed Service:-${characteristic}");
-      if (characteristic.properties.read) {
-        print("Descriter:-${characteristic.descriptors.first}");
-        // await characteristic.read();
-        if (characteristic.properties.read) {
-          await characteristic.read();
-        } else {
-          developer.log("This characteristic does not support READ.");
-        }
-      }
-      if (characteristic.properties.notify) {
-        await characteristic.setNotifyValue(true); // Enable notifications
-      } else {
-        developer.log("This characteristic does not support NOTIFY.");
-      }
-      if (mounted) {
-        // setState(() {});
-      }
-    } catch (e) {
-      Snackbar.show(ABC.c, prettyException("Subscribe Error:", e),
-          success: false);
-    }
-  }
-
-  Future<void> subscribeToCharacteristic(
-      BluetoothCharacteristic characteristic) async {
-    try {
-      if (characteristic.properties.notify) {
-        await characteristic.setNotifyValue(true); // Enable notifications
-      } else {
-        developer.log("ERROR: This characteristic does not support NOTIFY.");
-      }
-    } catch (e) {
-      developer.log("Failed to subscribe to characteristic: $e", error: e);
-      await Future.delayed(const Duration(seconds: 1));
-      await characteristic.setNotifyValue(true);
-    }
-  }
-
-  Future onReadPressed(BluetoothCharacteristic characteristic) async {
-    try {
-      await characteristic.read();
-      Snackbar.show(ABC.c, "Read: Success", success: true);
-      print("Start Reading");
-    } catch (e) {
-      Snackbar.show(ABC.c, prettyException("Read Error:", e), success: false);
-      print("Read Error ${e}");
-    }
-  }
+  // double calculateGasPercentage(double currentWeight) {
+  //   if (currentWeight < emptyWeight) {
+  //     return 0.0; // Prevent negative percentages if weight is below empty
+  //   }
+  //   return ((currentWeight - emptyWeight) / (fullWeight - emptyWeight)) * 100;
+  // }
+  // Future onWritePressedgenreq(BluetoothCharacteristic characteristic) async {
+  //   try {
+  //     await characteristic.write(
+  //         [0x40, 0xA8, 0x00, 0x01, 0x01, 0x01, 0xAA, 0x55],
+  //         withoutResponse: characteristic.properties.writeWithoutResponse,
+  //         allowLongWrite: true);
+  //     // await c.write([0xa, 0x1, 0x2, 0x3c, 0x1, 0x37, 0xaa, 0x37], withoutResponse: c.properties.writeWithoutResponse);
+  //     Snackbar.show(ABC.c, "Write: Success", success: true);
+  //     print("General Request Send :-${characteristic}");
+  //     if (characteristic.properties.read) {
+  //       await characteristic.read();
+  //     }
+  //   } catch (e) {
+  //     Snackbar.show(ABC.c, prettyException("Write Error:", e), success: false);
+  //   }
+  // }
+  // Future onSubscribePressed(BluetoothCharacteristic characteristic) async {
+  //   try {
+  //     String op =
+  //         characteristic.isNotifying == false ? "Subscribe" : "Unubscribe";
+  //     print("setNotifyValueop");
+  //     print(op);
+  //     print(characteristic.isNotifying == false);
+  //
+  //     await characteristic.setNotifyValue(characteristic.isNotifying == false);
+  //     Snackbar.show(ABC.c, "$op : Success", success: true);
+  //     developer.log("Subscribed Service:-${characteristic}");
+  //     if (characteristic.properties.read) {
+  //       print("Descriter:-${characteristic.descriptors.first}");
+  //       // await characteristic.read();
+  //       if (characteristic.properties.read) {
+  //         await characteristic.read();
+  //       } else {
+  //         developer.log("This characteristic does not support READ. 1");
+  //       }
+  //     }
+  //     if (characteristic.properties.notify) {
+  //       await characteristic.setNotifyValue(true); // Enable notifications
+  //     } else {
+  //       developer.log("This characteristic does not support NOTIFY.");
+  //     }
+  //     if (mounted) {
+  //       // setState(() {});
+  //     }
+  //   } catch (e) {
+  //     Snackbar.show(ABC.c, prettyException("Subscribe Error:", e),
+  //         success: false);
+  //   }
+  // }
+  // Future<void> subscribeToCharacteristic(BluetoothCharacteristic characteristic) async {
+  //   try {
+  //     if (characteristic.properties.notify) {
+  //       await characteristic.setNotifyValue(true); // Enable notifications
+  //     } else {
+  //       developer.log("ERROR: This characteristic does not support NOTIFY.");
+  //     }
+  //   } catch (e) {
+  //     developer.log("Failed to subscribe to characteristic: $e", error: e);
+  //     await Future.delayed(const Duration(seconds: 1));
+  //     await characteristic.setNotifyValue(true);
+  //   }
+  // }
+  // Future onReadPressed(BluetoothCharacteristic characteristic) async {
+  //   try {
+  //     await characteristic.read();
+  //     Snackbar.show(ABC.c, "Read: Success", success: true);
+  //     print("Start Reading");
+  //   } catch (e) {
+  //     Snackbar.show(ABC.c, prettyException("Read Error:", e), success: false);
+  //     print("Read Error ${e}");
+  //   }
+  // }
+  //
+  // void onConnectPressed(BluetoothDevice device) {
+  //   device.connectAndUpdateStream().then((_) {
+  //     showCustomDialog(context, () {
+  //       print("Dialog was closed, perform any action here.");
+  //     });
+  //     // If the connection was successful, print "Connected"
+  //     print("Connected");
+  //     Fluttertoast.showToast(msg: "Device Connected");
+  //   }).catchError((e) {
+  //     // If an error occurred during connection, print "Not connected"
+  //     print("Not connected");
+  //     Fluttertoast.showToast(msg: "Device Not connected");
+  //     Snackbar.show(ABC.c, prettyException("Connect Error:", e),
+  //         success: false);
+  //   });
+  // }
+  //
+  // Future onConnectPressedee(BluetoothDevice device) async {
+  //   try {
+  //     await device.connectAndUpdateStream();
+  //     Snackbar.show(ABC.c, "Connect: Success", success: true);
+  //   } catch (e) {
+  //     if (e is FlutterBluePlusException &&
+  //         e.code == FbpErrorCode.connectionCanceled.index) {
+  //       // ignore connections canceled by the user
+  //     } else {
+  //       Snackbar.show(ABC.c, prettyException("Connect Error:", e),
+  //           success: false);
+  //     }
+  //   }
+  // }
+  //
+  // Future onDiscoverServicesPressed(BluetoothDevice device) async {
+  //   if (mounted) {
+  //     // setState(() {
+  //     //   _isDiscoveringServices = true;
+  //     // });
+  //   }
+  //   try {
+  //     _services = await device.discoverServices();
+  //
+  //     print("_servicestest");
+  //     // print(_services);
+  //     Snackbar.show(ABC.c, "Discover Services: Success", success: true);
+  //   } catch (e) {
+  //     Snackbar.show(ABC.c, prettyException("Discover Services Error:", e),
+  //         success: false);
+  //     print("Discover Services Error:$e");
+  //   }
+  //   if (mounted) {
+  //     // setState(() {
+  //     //   _isDiscoveringServices = false;
+  //     // });
+  //   }
+  // }
+  //
+  // Future<void> _launchTask(String deviceName) async {
+  //   print("Task Launched Success");
+  //   String result;
+  //   await requestPermissions();
+  //   try {
+  //     final value = deviceName;
+  //     final duration = 1;
+  //     result = await platform.invokeMethod(
+  //         'launchPeriodicTask', {'device': value, 'duration': duration});
+  //   } on PlatformException catch (e) {
+  //     result = "Failed to launch task: '${e.message}'.";
+  //   }
+  //
+  //   setState(() {
+  //     _statusMessage = result;
+  //   });
+  // }
 
   // Method to check Bluetooth state
   Future<void> checkBluetoothState() async {
@@ -202,81 +275,6 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
       Navigator.pop(context);
     }
   }
-
-  void onConnectPressed(BluetoothDevice device) {
-    device.connectAndUpdateStream().then((_) {
-      showCustomDialog(context, () {
-        print("Dialog was closed, perform any action here.");
-      });
-      // If the connection was successful, print "Connected"
-      print("Connected");
-      Fluttertoast.showToast(msg: "Device Connected");
-    }).catchError((e) {
-      // If an error occurred during connection, print "Not connected"
-      print("Not connected");
-      Fluttertoast.showToast(msg: "Device Not connected");
-      Snackbar.show(ABC.c, prettyException("Connect Error:", e),
-          success: false);
-    });
-  }
-
-  Future onConnectPressedee(BluetoothDevice device) async {
-    try {
-      await device.connectAndUpdateStream();
-      Snackbar.show(ABC.c, "Connect: Success", success: true);
-    } catch (e) {
-      if (e is FlutterBluePlusException &&
-          e.code == FbpErrorCode.connectionCanceled.index) {
-        // ignore connections canceled by the user
-      } else {
-        Snackbar.show(ABC.c, prettyException("Connect Error:", e),
-            success: false);
-      }
-    }
-  }
-
-  Future onDiscoverServicesPressed(BluetoothDevice device) async {
-    if (mounted) {
-      // setState(() {
-      //   _isDiscoveringServices = true;
-      // });
-    }
-    try {
-      _services = await device.discoverServices();
-
-      print("_servicestest");
-      // print(_services);
-      Snackbar.show(ABC.c, "Discover Services: Success", success: true);
-    } catch (e) {
-      Snackbar.show(ABC.c, prettyException("Discover Services Error:", e),
-          success: false);
-      print("Discover Services Error:$e");
-    }
-    if (mounted) {
-      // setState(() {
-      //   _isDiscoveringServices = false;
-      // });
-    }
-  }
-
-  Future<void> _launchTask(String deviceName) async {
-    print("Task Launched Success");
-    String result;
-    await requestPermissions();
-    try {
-      final value = deviceName;
-      final duration = 1;
-      result = await platform.invokeMethod(
-          'launchPeriodicTask', {'device': value, 'duration': duration});
-    } on PlatformException catch (e) {
-      result = "Failed to launch task: '${e.message}'.";
-    }
-
-    setState(() {
-      _statusMessage = result;
-    });
-  }
-
   late StreamSubscription<List<ScanResult>> _scanResultsSubscription;
 
   @override
@@ -288,11 +286,10 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
     onScanPressed();
 
     _scanResultsSubscription = FlutterBluePlus.scanResults.listen((results) {
-      // Filter results based on platformName being "BLE Device"
       _scanResults = results.where((result) {
         return result.device.platformName ==
-            // "Project_RED_TTTP"; // Case-sensitive match
-            "BLE Device"; // Case-sensitive match
+            "Project_RED_TTTP"; // Case-sensitive match
+            // "BLE Device"; // Case-sensitive match
       }).toList();
 
       // if (mounted) {
@@ -350,9 +347,6 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
       Snackbar.show(ABC.b, prettyException("Start Scan Error:", e),
           success: false);
     }
-    if (mounted) {
-      // setState(() {});
-    }
   }
 
   void connectDevice(BluetoothDevice device) {
@@ -369,35 +363,75 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
     });
   }
 
+  // DeviceResponse? parseDeviceResponse(String response) {
+  //   // Ensure the response is in uppercase
+  //   response = response.toUpperCase();
+  //
+  //   // Expected response length is 24 hex digits
+  //   if (response.length != 24) {
+  //     // print('Invalid response length: ${response.length}');
+  //     return null;
+  //   }
+  //
+  //   try {
+  //     // Parsing the response
+  //     String deviceId = response.substring(0, 6); // 3 bytes -> 6 hex digits
+  //     String reqCode = response.substring(6, 8); // 1 byte -> 2 hex digits
+  //     String dataLength = response.substring(8, 10); // 1 byte -> 2 hex digits
+  //
+  //     String beforeDecimal = response.substring(10, 12);
+  //     String afterDecimal = response.substring(12, 14);
+  //
+  //     String battery = response.substring(14, 16);
+  //     bool buzzer = response.substring(16, 18) == '00';
+  //     bool critical = response.substring(18, 20) == '00';
+  //     String checksum = response.substring(20, 24); // 2 bytes -> 4 hex digits
+  //
+  //     return DeviceResponse(
+  //       deviceId: deviceId,
+  //       reqCode: reqCode,
+  //       dataLength: dataLength,
+  //       beforeDecimal: beforeDecimal,
+  //       afterDecimal: afterDecimal,
+  //       battery: battery,
+  //       buzzer: buzzer,
+  //       critical: critical,
+  //       checksum: checksum,
+  //     );
+  //   } catch (e) {
+  //     print('Error parsing response: $e');
+  //     return null;
+  //   }
+  // }
+
+
   DeviceResponse? parseDeviceResponse(String response) {
-    // Ensure the response is in uppercase
     response = response.toUpperCase();
 
-    // Expected response length is 24 hex digits
     if (response.length != 24) {
-      // print('Invalid response length: ${response.length}');
       return null;
     }
 
     try {
-      // Parsing the response
       String deviceId = response.substring(0, 6); // 3 bytes -> 6 hex digits
       String reqCode = response.substring(6, 8); // 1 byte -> 2 hex digits
       String dataLength = response.substring(8, 10); // 1 byte -> 2 hex digits
 
-      String beforeDecimal = response.substring(10, 12);
-      String afterDecimal = response.substring(12, 14);
+      // Convert hex to decimal
+      int beforeDecimal = int.parse(response.substring(10, 12), radix: 16);
+      int afterDecimal = int.parse(response.substring(12, 14), radix: 16);
+
       String battery = response.substring(14, 16);
       bool buzzer = response.substring(16, 18) == '00';
-      bool critical = response.substring(18, 20) == '00';
+      bool critical = response.substring(18, 20) == '10';
       String checksum = response.substring(20, 24); // 2 bytes -> 4 hex digits
 
       return DeviceResponse(
         deviceId: deviceId,
         reqCode: reqCode,
         dataLength: dataLength,
-        beforeDecimal: beforeDecimal,
-        afterDecimal: afterDecimal,
+        beforeDecimal: beforeDecimal.toString(),
+        afterDecimal: afterDecimal.toString(),
         battery: battery,
         buzzer: buzzer,
         critical: critical,
@@ -415,13 +449,46 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
   var count = 0;
   bool isCount = false;
 
+  Future<void> saveBluetoothDevice(BluetoothDevice device) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString("bluetooth_device_mac", device.remoteId.str);
+  }
+
+
+
   Future<void> getConnection() async {
     try {
-      Utils.device = _scanResults.first.device;
+      var userData = await UserPreferences().getUserData();
+      if (_scanResults.isEmpty) {
+        print("No devices found in scan results.");
+        Fluttertoast.showToast(
+          msg: 'No Bluetooth devices found!',
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0,
+        );
+        return;
+      }
+
+      BluetoothDevice locDevice = _scanResults.first.device;
+      Utils.device = locDevice;
+
+      await saveBluetoothDevice(locDevice);
+
+      String customerId = Utils.cusUuid ?? userData["email"]!;
+
+      await FirestoreService().updateDeviceDetails(
+        customerId: customerId,
+        device: Utils.device,
+      );
+
       print("Connecting to device: ${Utils.device}");
-      // Attempt connection only once
+
       await Utils.device.connect();
       bool connectionStatus = await Utils.device.isConnected;
+
       if (connectionStatus) {
         Fluttertoast.showToast(
           msg: 'Device connected successfully!',
@@ -431,19 +498,29 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
           textColor: Colors.white,
           fontSize: 16.0,
         );
+
         isConnected = true;
         Vibration.vibrate();
+
         Future.delayed(const Duration(seconds: 1), () {
           showCustomDialog(context, () async {
             await Future.delayed(const Duration(seconds: 1));
             Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const FullOtherInformation()));
+              context,
+              MaterialPageRoute(builder: (context) => const FullOtherInformation()),
+            );
           });
         });
       } else {
         print("Device connection failed.");
+        Fluttertoast.showToast(
+          msg: 'Device connection failed!',
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0,
+        );
       }
     } catch (e) {
       print("Connection error: $e");
@@ -457,6 +534,63 @@ class _AddManuallyDeviceScreenState extends State<AddManuallyDeviceScreen>
       );
     }
   }
+
+
+  // Future<void> getConnection() async {
+  //   try {
+  //     var userData = await UserPreferences().getUserData();
+  //
+  //     BluetoothDevice Locdevice;
+  //
+  //     Locdevice =_scanResults.first.device;
+  //     Utils.device = _scanResults.first.device;
+  //
+  //     String customerId = Utils.cusUuid == null
+  //         ? userData["email"]!
+  //         : Utils.cusUuid;
+  //
+  //     await FirestoreService().updateDeviceDetails(
+  //       customerId: customerId,
+  //       device: Utils.device,
+  //     );
+  //     print("Connecting to device: ${Utils.device}");
+  //     await Utils.device.connect();
+  //     bool connectionStatus = await Utils.device.isConnected;
+  //     if (connectionStatus) {
+  //       Fluttertoast.showToast(
+  //         msg: 'Device connected successfully!',
+  //         toastLength: Toast.LENGTH_LONG,
+  //         gravity: ToastGravity.BOTTOM,
+  //         backgroundColor: Colors.black,
+  //         textColor: Colors.white,
+  //         fontSize: 16.0,
+  //       );
+  //       isConnected = true;
+  //       Vibration.vibrate();
+  //       Future.delayed(const Duration(seconds: 1), () {
+  //         showCustomDialog(context, () async {
+  //           await Future.delayed(const Duration(seconds: 1));
+  //           Navigator.pushReplacement(
+  //               context,
+  //               MaterialPageRoute(
+  //                   builder: (context) => const FullOtherInformation()));
+  //         });
+  //       });
+  //     } else {
+  //       print("Device connection failed.");
+  //     }
+  //   } catch (e) {
+  //     print("Connection error: $e");
+  //     Fluttertoast.showToast(
+  //       msg: 'Connection error!',
+  //       toastLength: Toast.LENGTH_LONG,
+  //       gravity: ToastGravity.BOTTOM,
+  //       backgroundColor: Colors.red,
+  //       textColor: Colors.white,
+  //       fontSize: 16.0,
+  //     );
+  //   }
+  // }
 
   // Future GetData() async {
   //   isLoading = true;
